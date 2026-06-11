@@ -1,0 +1,886 @@
+[
+  {
+    "id": "mpu0prli4ljva3",
+    "date": 1780246355958,
+    "mode": "farm",
+    "participationType": "personal",
+    "bankNames": [
+      "综合常识题库"
+    ],
+    "totalQuestions": 10,
+    "totalCorrect": 1,
+    "totalEarned": 10,
+    "studentResults": {
+      "mptavg1pwevl8a": {
+        "id": "mptavg1pwevl8a",
+        "name": "新学生",
+        "avatar": "",
+        "group": "asdf",
+        "correctCount": 1,
+        "totalCount": 3,
+        "pointsEarned": 10
+      },
+      "mptavlgejej9fq": {
+        "id": "mptavlgejej9fq",
+        "name": "新学生",
+        "avatar": "",
+        "group": "asdfa",
+        "correctCount": 0,
+        "totalCount": 3,
+        "pointsEarned": 0
+      }
+    }
+  },
+  {
+    "id": "mpuin8fuk7s2ky",
+    "date": 1780276470906,
+    "mode": "farm",
+    "participationType": "personal",
+    "bankNames": [
+      "德育一年级应知应会"
+    ],
+    "totalQuestions": 150,
+    "totalCorrect": 0,
+    "totalEarned": 0,
+    "studentResults": {
+      "mptpbzz6mc4ihy": {
+        "id": "mptpbzz6mc4ihy",
+        "name": "冯宇岑",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 0,
+        "totalCount": 1,
+        "pointsEarned": 0
+      },
+      "mptpbzz683r3pd": {
+        "id": "mptpbzz683r3pd",
+        "name": "陈宇鑫",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6yxa4of": {
+        "id": "mptpbzz6yxa4of",
+        "name": "林紫欣",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz66rxa51": {
+        "id": "mptpbzz66rxa51",
+        "name": "苏梓轩",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6twhud7": {
+        "id": "mptpbzz6twhud7",
+        "name": "方诗怡",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz664b1l9": {
+        "id": "mptpbzz664b1l9",
+        "name": "方嘉豪",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6rat51q": {
+        "id": "mptpbzz6rat51q",
+        "name": "何方媛",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6fpte6a": {
+        "id": "mptpbzz6fpte6a",
+        "name": "方俊豪",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6zk20yh": {
+        "id": "mptpbzz6zk20yh",
+        "name": "方雨柔",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6rwidzl": {
+        "id": "mptpbzz6rwidzl",
+        "name": "苏梓晴",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz67vzt4i": {
+        "id": "mptpbzz67vzt4i",
+        "name": "陈博文",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6z5s81a": {
+        "id": "mptpbzz6z5s81a",
+        "name": "何沐阳",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6yr8yts": {
+        "id": "mptpbzz6yr8yts",
+        "name": "黄子欣",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6byhhbl": {
+        "id": "mptpbzz6byhhbl",
+        "name": "蔡沐妍",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6541hq1": {
+        "id": "mptpbzz6541hq1",
+        "name": "苏廷烨",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6aagryq": {
+        "id": "mptpbzz6aagryq",
+        "name": "方佳豪",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6wdth0o": {
+        "id": "mptpbzz6wdth0o",
+        "name": "方墨轩",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6p684vm": {
+        "id": "mptpbzz6p684vm",
+        "name": "陈芸汐",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6fepkoh": {
+        "id": "mptpbzz6fepkoh",
+        "name": "苏雨辰",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz611t0tz": {
+        "id": "mptpbzz611t0tz",
+        "name": "方予辰",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6tzg50d": {
+        "id": "mptpbzz6tzg50d",
+        "name": "苏洋婷",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6p178zi": {
+        "id": "mptpbzz6p178zi",
+        "name": "方鸿轩",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz63eew19": {
+        "id": "mptpbzz63eew19",
+        "name": "方凌静",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz65t6vhe": {
+        "id": "mptpbzz65t6vhe",
+        "name": "苏城霖",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6zg5xrm": {
+        "id": "mptpbzz6zg5xrm",
+        "name": "方梓嫣",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz63p2thh": {
+        "id": "mptpbzz63p2thh",
+        "name": "苏少俊",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6lja058": {
+        "id": "mptpbzz6lja058",
+        "name": "方彬城",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6394uxo": {
+        "id": "mptpbzz6394uxo",
+        "name": "方梓莹",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6pv7505": {
+        "id": "mptpbzz6pv7505",
+        "name": "林诗其",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      },
+      "mptpbzz6mbeklw": {
+        "id": "mptpbzz6mbeklw",
+        "name": "方冰妍",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 0,
+        "totalCount": 0,
+        "pointsEarned": 0
+      }
+    }
+  },
+  {
+    "id": "mpuj0ymj1bgq2o",
+    "date": 1780277111371,
+    "mode": "farm",
+    "participationType": "personal",
+    "bankNames": [
+      "德育一年级应知应会"
+    ],
+    "totalQuestions": 30,
+    "totalCorrect": 26,
+    "totalEarned": 260,
+    "studentResults": {
+      "mptpbzz6mc4ihy": {
+        "id": "mptpbzz6mc4ihy",
+        "name": "冯宇岑",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz683r3pd": {
+        "id": "mptpbzz683r3pd",
+        "name": "陈宇鑫",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz6yxa4of": {
+        "id": "mptpbzz6yxa4of",
+        "name": "林紫欣",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 0,
+        "totalCount": 1,
+        "pointsEarned": 0
+      },
+      "mptpbzz66rxa51": {
+        "id": "mptpbzz66rxa51",
+        "name": "苏梓轩",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz6twhud7": {
+        "id": "mptpbzz6twhud7",
+        "name": "方诗怡",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 0,
+        "totalCount": 1,
+        "pointsEarned": 0
+      },
+      "mptpbzz664b1l9": {
+        "id": "mptpbzz664b1l9",
+        "name": "方嘉豪",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz6rat51q": {
+        "id": "mptpbzz6rat51q",
+        "name": "何方媛",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz6fpte6a": {
+        "id": "mptpbzz6fpte6a",
+        "name": "方俊豪",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz6zk20yh": {
+        "id": "mptpbzz6zk20yh",
+        "name": "方雨柔",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz6rwidzl": {
+        "id": "mptpbzz6rwidzl",
+        "name": "苏梓晴",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz67vzt4i": {
+        "id": "mptpbzz67vzt4i",
+        "name": "陈博文",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz6z5s81a": {
+        "id": "mptpbzz6z5s81a",
+        "name": "何沐阳",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 0,
+        "totalCount": 1,
+        "pointsEarned": 0
+      },
+      "mptpbzz6yr8yts": {
+        "id": "mptpbzz6yr8yts",
+        "name": "黄子欣",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz6byhhbl": {
+        "id": "mptpbzz6byhhbl",
+        "name": "蔡沐妍",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz6541hq1": {
+        "id": "mptpbzz6541hq1",
+        "name": "苏廷烨",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz6aagryq": {
+        "id": "mptpbzz6aagryq",
+        "name": "方佳豪",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz6wdth0o": {
+        "id": "mptpbzz6wdth0o",
+        "name": "方墨轩",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 0,
+        "totalCount": 1,
+        "pointsEarned": 0
+      },
+      "mptpbzz6p684vm": {
+        "id": "mptpbzz6p684vm",
+        "name": "陈芸汐",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz6fepkoh": {
+        "id": "mptpbzz6fepkoh",
+        "name": "苏雨辰",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz611t0tz": {
+        "id": "mptpbzz611t0tz",
+        "name": "方予辰",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz6tzg50d": {
+        "id": "mptpbzz6tzg50d",
+        "name": "苏洋婷",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz6p178zi": {
+        "id": "mptpbzz6p178zi",
+        "name": "方鸿轩",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz63eew19": {
+        "id": "mptpbzz63eew19",
+        "name": "方凌静",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz65t6vhe": {
+        "id": "mptpbzz65t6vhe",
+        "name": "苏城霖",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz6zg5xrm": {
+        "id": "mptpbzz6zg5xrm",
+        "name": "方梓嫣",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz63p2thh": {
+        "id": "mptpbzz63p2thh",
+        "name": "苏少俊",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz6lja058": {
+        "id": "mptpbzz6lja058",
+        "name": "方彬城",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz6394uxo": {
+        "id": "mptpbzz6394uxo",
+        "name": "方梓莹",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz6pv7505": {
+        "id": "mptpbzz6pv7505",
+        "name": "林诗其",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      },
+      "mptpbzz6mbeklw": {
+        "id": "mptpbzz6mbeklw",
+        "name": "方冰妍",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 1,
+        "totalCount": 1,
+        "pointsEarned": 10
+      }
+    }
+  },
+  {
+    "id": "mpuk5urzyawbdb",
+    "date": 1780279019279,
+    "mode": "pk",
+    "participationType": "group",
+    "bankNames": [
+      "四年级科学下册第一单元"
+    ],
+    "totalQuestions": 90,
+    "totalCorrect": 69,
+    "totalEarned": 500,
+    "studentResults": {
+      "mptpbzz6mc4ihy": {
+        "id": "mptpbzz6mc4ihy",
+        "name": "冯宇岑",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 2,
+        "totalCount": 3,
+        "pointsEarned": 20
+      },
+      "mptpbzz683r3pd": {
+        "id": "mptpbzz683r3pd",
+        "name": "陈宇鑫",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 3,
+        "totalCount": 3,
+        "pointsEarned": 45
+      },
+      "mptpbzz6yxa4of": {
+        "id": "mptpbzz6yxa4of",
+        "name": "林紫欣",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 3,
+        "totalCount": 3,
+        "pointsEarned": 30
+      },
+      "mptpbzz66rxa51": {
+        "id": "mptpbzz66rxa51",
+        "name": "苏梓轩",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 3,
+        "totalCount": 3,
+        "pointsEarned": 15
+      },
+      "mptpbzz6twhud7": {
+        "id": "mptpbzz6twhud7",
+        "name": "方诗怡",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 3,
+        "totalCount": 3,
+        "pointsEarned": 15
+      },
+      "mptpbzz664b1l9": {
+        "id": "mptpbzz664b1l9",
+        "name": "方嘉豪",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 3,
+        "totalCount": 3,
+        "pointsEarned": 15
+      },
+      "mptpbzz6rat51q": {
+        "id": "mptpbzz6rat51q",
+        "name": "何方媛",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 3,
+        "totalCount": 3,
+        "pointsEarned": 15
+      },
+      "mptpbzz6fpte6a": {
+        "id": "mptpbzz6fpte6a",
+        "name": "方俊豪",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 2,
+        "totalCount": 3,
+        "pointsEarned": 10
+      },
+      "mptpbzz6zk20yh": {
+        "id": "mptpbzz6zk20yh",
+        "name": "方雨柔",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 3,
+        "totalCount": 3,
+        "pointsEarned": 30
+      },
+      "mptpbzz6rwidzl": {
+        "id": "mptpbzz6rwidzl",
+        "name": "苏梓晴",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 3,
+        "totalCount": 3,
+        "pointsEarned": 30
+      },
+      "mptpbzz67vzt4i": {
+        "id": "mptpbzz67vzt4i",
+        "name": "陈博文",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 2,
+        "totalCount": 3,
+        "pointsEarned": 10
+      },
+      "mptpbzz6z5s81a": {
+        "id": "mptpbzz6z5s81a",
+        "name": "何沐阳",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 1,
+        "totalCount": 3,
+        "pointsEarned": 5
+      },
+      "mptpbzz6yr8yts": {
+        "id": "mptpbzz6yr8yts",
+        "name": "黄子欣",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 1,
+        "totalCount": 3,
+        "pointsEarned": 5
+      },
+      "mptpbzz6byhhbl": {
+        "id": "mptpbzz6byhhbl",
+        "name": "蔡沐妍",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 3,
+        "totalCount": 3,
+        "pointsEarned": 15
+      },
+      "mptpbzz6541hq1": {
+        "id": "mptpbzz6541hq1",
+        "name": "苏廷烨",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 1,
+        "totalCount": 3,
+        "pointsEarned": 10
+      },
+      "mptpbzz6aagryq": {
+        "id": "mptpbzz6aagryq",
+        "name": "方佳豪",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 2,
+        "totalCount": 3,
+        "pointsEarned": 20
+      },
+      "mptpbzz6wdth0o": {
+        "id": "mptpbzz6wdth0o",
+        "name": "方墨轩",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 1,
+        "totalCount": 3,
+        "pointsEarned": 5
+      },
+      "mptpbzz6p684vm": {
+        "id": "mptpbzz6p684vm",
+        "name": "陈芸汐",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 3,
+        "totalCount": 3,
+        "pointsEarned": 15
+      },
+      "mptpbzz6fepkoh": {
+        "id": "mptpbzz6fepkoh",
+        "name": "苏雨辰",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 3,
+        "totalCount": 3,
+        "pointsEarned": 30
+      },
+      "mptpbzz611t0tz": {
+        "id": "mptpbzz611t0tz",
+        "name": "方予辰",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 1,
+        "totalCount": 3,
+        "pointsEarned": 5
+      },
+      "mptpbzz6tzg50d": {
+        "id": "mptpbzz6tzg50d",
+        "name": "苏洋婷",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 3,
+        "totalCount": 3,
+        "pointsEarned": 30
+      },
+      "mptpbzz6p178zi": {
+        "id": "mptpbzz6p178zi",
+        "name": "方鸿轩",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 2,
+        "totalCount": 3,
+        "pointsEarned": 20
+      },
+      "mptpbzz63eew19": {
+        "id": "mptpbzz63eew19",
+        "name": "方凌静",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 3,
+        "totalCount": 3,
+        "pointsEarned": 15
+      },
+      "mptpbzz65t6vhe": {
+        "id": "mptpbzz65t6vhe",
+        "name": "苏城霖",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 2,
+        "totalCount": 3,
+        "pointsEarned": 10
+      },
+      "mptpbzz6zg5xrm": {
+        "id": "mptpbzz6zg5xrm",
+        "name": "方梓嫣",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 2,
+        "totalCount": 3,
+        "pointsEarned": 10
+      },
+      "mptpbzz63p2thh": {
+        "id": "mptpbzz63p2thh",
+        "name": "苏少俊",
+        "avatar": "",
+        "group": "1",
+        "correctCount": 3,
+        "totalCount": 3,
+        "pointsEarned": 30
+      },
+      "mptpbzz6lja058": {
+        "id": "mptpbzz6lja058",
+        "name": "方彬城",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 1,
+        "totalCount": 3,
+        "pointsEarned": 5
+      },
+      "mptpbzz6394uxo": {
+        "id": "mptpbzz6394uxo",
+        "name": "方梓莹",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 2,
+        "totalCount": 3,
+        "pointsEarned": 10
+      },
+      "mptpbzz6pv7505": {
+        "id": "mptpbzz6pv7505",
+        "name": "林诗其",
+        "avatar": "",
+        "group": "2",
+        "correctCount": 2,
+        "totalCount": 3,
+        "pointsEarned": 10
+      },
+      "mptpbzz6mbeklw": {
+        "id": "mptpbzz6mbeklw",
+        "name": "方冰妍",
+        "avatar": "",
+        "group": "3",
+        "correctCount": 3,
+        "totalCount": 3,
+        "pointsEarned": 15
+      }
+    }
+  }
+]
