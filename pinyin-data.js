@@ -194,7 +194,11 @@ var PinyinData = {
     if (!this._loadingCallbacks[semesterId]._scriptCreated) {
       this._loadingCallbacks[semesterId]._scriptCreated = true;
       var script = document.createElement('script');
-      script.src = 'data/' + semesterId + '.js';
+      // 使用当前页面所在目录作为基准，兼容 GitHub Pages 子目录部署
+      var baseUrl = (document.currentScript && document.currentScript.src)
+        ? document.currentScript.src.replace(/[^/]*$/, '')
+        : '';
+      script.src = baseUrl + 'data/' + semesterId + '.js';
       script.onerror = function() {
         console.error('加载学期数据失败: ' + semesterId);
         var cbs = PinyinData._loadingCallbacks[semesterId];

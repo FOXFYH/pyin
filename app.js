@@ -2461,6 +2461,19 @@
         }
     };
 
+    // 全屏切换
+    App.toggleFullscreen = function () {
+        var btn = document.getElementById('btn-fullscreen');
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            var el = document.documentElement;
+            if (el.requestFullscreen) el.requestFullscreen();
+            else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+        } else {
+            if (document.exitFullscreen) document.exitFullscreen();
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        }
+    };
+
     // 全局消息监听器（必须在最外层注册）
     window.addEventListener('message', function (e) {
         if (!e.data || typeof e.data !== 'object') return;
