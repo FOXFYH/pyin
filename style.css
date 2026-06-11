@@ -313,15 +313,22 @@ body {
 }
 .opt-btn.disabled { opacity: 0.4; pointer-events: none; }
 
-/* 特殊选项：整体认读/无声母 */
+/* 特殊选项：整体认读/不用声母 */
 .opt-btn.special-opt {
     background: rgba(108,92,231,0.15);
     border-color: rgba(108,92,231,0.5);
     font-size: 14px;
+    aspect-ratio: auto;
+    padding: 10px 8px;
 }
 .opt-btn.special-opt:hover {
     border-color: var(--accent-2);
     background: rgba(168,85,247,0.2);
+}
+.special-grid-2col {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px;
+    margin-top: 8px;
 }
 
 /* 声调按钮特殊样式 */

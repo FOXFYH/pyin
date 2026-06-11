@@ -859,21 +859,36 @@
                 });
             }
 
-            // 固定在末尾添加"整体认读"和"无声母"选项
-            initials.push('整体认读');
-            initials.push('无声母');
+            // 固定在末尾添加"整体认读"和"不用声母"选项
+            // 不加入声母网格，单独用2列网格排列
 
             var gridInit = document.getElementById('grid-initial');
             gridInit.innerHTML = '';
+            // 移除之前创建的特殊网格
+            var oldSpecial = document.getElementById('grid-initial-special');
+            if (oldSpecial) oldSpecial.remove();
             initials.forEach(function (init) {
                 var btn = document.createElement('button');
                 btn.className = 'opt-btn';
-                if (init === '整体认读' || init === '无声母') btn.classList.add('special-opt');
                 btn.textContent = init;
                 btn.setAttribute('data-value', init);
                 btn.onclick = function () { App.Exam.selectInitial(init, btn); };
                 gridInit.appendChild(btn);
             });
+
+            // 整体认读和不用声母单独2列排列
+            var specialGrid = document.createElement('div');
+            specialGrid.className = 'option-grid special-grid-2col';
+            specialGrid.id = 'grid-initial-special';
+            ['整体认读', '不用声母'].forEach(function (label) {
+                var btn = document.createElement('button');
+                btn.className = 'opt-btn special-opt';
+                btn.textContent = label;
+                btn.setAttribute('data-value', label);
+                btn.onclick = function () { App.Exam.selectInitial(label, btn); };
+                specialGrid.appendChild(btn);
+            });
+            gridInit.parentNode.insertBefore(specialGrid, gridInit.nextSibling);
 
             // 介母选项（i, u, ü + 无介母）
             var medials = ['i', 'u', 'ü'];
@@ -953,7 +968,7 @@
         selectInitial: function (val, btn) {
             if (this.currentStep !== 'initial' || this.answered) return;
             App.Sound.playClick();
-            var btns = document.querySelectorAll('#grid-initial .opt-btn');
+            var btns = document.querySelectorAll('#grid-initial .opt-btn, #grid-initial-special .opt-btn');
             btns.forEach(function (b) { b.classList.remove('selected'); });
             btn.classList.add('selected');
             this.selectedInitial = val;
@@ -964,12 +979,12 @@
             function hasMatchingInit(v, parses) {
                 return parses.some(function (p) {
                     if (v === '整体认读') return p.isWhole;
-                    if (v === '无声母') return !p.isWhole && !p.initial;
+                    if (v === '不用声母') return !p.isWhole && !p.initial;
                     return !p.isWhole && p.initial && p.initial === v;
                 });
             }
 
-            // 选了"整体认读"或"无声母"：判断是否有匹配的合法解析
+            // 选了"整体认读"或"不用声母"：判断是否有匹配的合法解析
             if (val === '整体认读') {
                 var wholeParses = validParses.filter(function (p) { return p.isWhole; });
                 if (wholeParses.length > 0) {
@@ -987,10 +1002,10 @@
                 }
                 return;
             }
-            if (val === '无声母') {
+            if (val === '不用声母') {
                 var noInitParses = validParses.filter(function (p) { return !p.isWhole && !p.initial; });
                 if (noInitParses.length > 0) {
-                    this.selectedInitial = '无声母';
+                    this.selectedInitial = '不用声母';
                     this._matchingParses = noInitParses;
                     this.updatePinyinDisplay();
                     // 判断匹配的解析中是否有介母
@@ -1126,7 +1141,7 @@
             // 判断是否需要标调位置步骤：只有多个元音才需要
             var matchedParse = toneParses[0];
             var baseStr = this._getFinalBaseStrForParse(matchedParse);
-            var init = (this.selectedInitial === '整体认读' || this.selectedInitial === '无声母') ? '' : this.selectedInitial;
+            var init = (this.selectedInitial === '整体认读' || this.selectedInitial === '不用声母') ? '' : this.selectedInitial;
             if (init && 'jqxy'.indexOf(init) >= 0) {
                 baseStr = baseStr.replace(/ü/g, 'u');
             }
@@ -1151,7 +1166,7 @@
         },
 
         updatePinyinDisplay: function () {
-            var init = (this.selectedInitial === '(无)' || this.selectedInitial === '整体认读' || this.selectedInitial === '无声母') ? '' : this.selectedInitial;
+            var init = (this.selectedInitial === '(无)' || this.selectedInitial === '整体认读' || this.selectedInitial === '不用声母') ? '' : this.selectedInitial;
             var med = this.selectedMedial || '';
             var final_ = this.selectedFinal;
             var tone = this.selectedTone >= 0 ? this.selectedTone : 0;
@@ -1228,7 +1243,7 @@
 
             var baseStr = this._getFinalBaseStr();
             // j/q/x/y 后的 ü 写成 u
-            var init = (this.selectedInitial === '整体认读' || this.selectedInitial === '无声母') ? '' : this.selectedInitial;
+            var init = (this.selectedInitial === '整体认读' || this.selectedInitial === '不用声母') ? '' : this.selectedInitial;
             if (init && 'jqxy'.indexOf(init) >= 0) {
                 baseStr = baseStr.replace(/ü/g, 'u');
             }
@@ -1296,7 +1311,7 @@
                 var parsed = validParses[vi];
                 var correctInit;
                 if (parsed.isWhole) { correctInit = '整体认读'; }
-                else if (!parsed.initial) { correctInit = '无声母'; }
+                else if (!parsed.initial) { correctInit = '不用声母'; }
                 else { correctInit = parsed.initial; }
                 var correctMedial = parsed.medial || '';
                 var correctFinal = parsed.isWhole ? parsed.base : parsed.final;
@@ -1317,7 +1332,7 @@
 
             var correctInit;
             if (statParsed.isWhole) { correctInit = '整体认读'; }
-            else if (!statParsed.initial) { correctInit = '无声母'; }
+            else if (!statParsed.initial) { correctInit = '不用声母'; }
             else { correctInit = statParsed.initial; }
             var correctMedial = statParsed.medial || '';
             var correctFinal = statParsed.isWhole ? statParsed.base : statParsed.final;
@@ -1398,7 +1413,7 @@
             // 收集所有合法解析的正确值（用于高亮）
             var validInits = [], validMedials = [], validFinals = [], validTones = [];
             this._validParses.forEach(function (p) {
-                var ci; if (p.isWhole) ci = '整体认读'; else if (!p.initial) ci = '无声母'; else ci = p.initial;
+                var ci; if (p.isWhole) ci = '整体认读'; else if (!p.initial) ci = '不用声母'; else ci = p.initial;
                 if (validInits.indexOf(ci) === -1) validInits.push(ci);
                 var cm = p.medial || '';
                 if (validMedials.indexOf(cm) === -1) validMedials.push(cm);
@@ -1409,7 +1424,7 @@
             });
 
             // 高亮声母
-            document.querySelectorAll('#grid-initial .opt-btn').forEach(function (b) {
+            document.querySelectorAll('#grid-initial .opt-btn, #grid-initial-special .opt-btn').forEach(function (b) {
                 if (validInits.indexOf(b.getAttribute('data-value')) >= 0) b.classList.add('correct');
                 else if (b.classList.contains('selected') && !initCorrect) b.classList.add('wrong');
             });
@@ -1478,7 +1493,7 @@
                     if (correctParsed.initial) {
                         breakdownHTML += '<div class="feedback-decomp"><span class="decomp-label">声母</span><span class="decomp-value">' + correctParsed.initial + '</span></div>';
                     } else {
-                        breakdownHTML += '<div class="feedback-decomp"><span class="decomp-label">无声母</span><span class="decomp-value">-</span></div>';
+                        breakdownHTML += '<div class="feedback-decomp"><span class="decomp-label">不用声母</span><span class="decomp-value">-</span></div>';
                     }
                     // 介母
                     if (correctParsed.medial) {
@@ -1599,7 +1614,7 @@
             var parsed = PinyinData.parsePinyin(q.pinyin);
             var correctInit;
             if (parsed.isWhole) { correctInit = '整体认读'; }
-            else if (!parsed.initial) { correctInit = '无声母'; }
+            else if (!parsed.initial) { correctInit = '不用声母'; }
             else { correctInit = parsed.initial; }
             var correctMedial = parsed.medial || '';
             var correctFinal = parsed.isWhole ? parsed.base : parsed.final;
@@ -2099,6 +2114,16 @@
                 var s = App.Storage.getSettings(); s.autoSaveInterval = parseInt(this.value); App.Storage.setSettings(s);
                 App.FileSync.startAutoSave(); // 重新启动以应用新间隔
             };
+            document.getElementById('setting-feedback-font-size').oninput = function () {
+                document.getElementById('setting-feedback-font-size-val').textContent = this.value + 'px';
+                var s = App.Storage.getSettings(); s.feedbackFontSize = parseInt(this.value); App.Storage.setSettings(s);
+                document.documentElement.style.setProperty('--feedback-answer-size', this.value + 'px');
+            };
+            document.getElementById('setting-pinyin-display-size').oninput = function () {
+                document.getElementById('setting-pinyin-display-size-val').textContent = this.value + 'px';
+                var s = App.Storage.getSettings(); s.pinyinDisplaySize = parseInt(this.value); App.Storage.setSettings(s);
+                document.documentElement.style.setProperty('--pinyin-display-size', this.value + 'px');
+            };
         },
 
         resetData: function () {
@@ -2453,6 +2478,10 @@
         App.FX.init();
         App.FileSync.initFrame();
         App.Exam._loadOptionFontSize();
+        // 应用保存的字体大小设置
+        var s = App.Storage.getSettings();
+        if (s.feedbackFontSize) document.documentElement.style.setProperty('--feedback-answer-size', s.feedbackFontSize + 'px');
+        if (s.pinyinDisplaySize) document.documentElement.style.setProperty('--pinyin-display-size', s.pinyinDisplaySize + 'px');
         App.Home.render();
         // 预加载当前学期数据
         var curSem = App.Semester.getCurrentSemester();
