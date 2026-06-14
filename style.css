@@ -26,7 +26,7 @@
     --radius-xl: 28px;
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --opt-font-size: 20px;
-    --pinyin-display-size: 56px;
+    --pinyin-display-size: 72px;
     --feedback-answer-size: 28px;
 }
 
@@ -71,6 +71,10 @@ body {
 @keyframes popIn { 0%{opacity:0;transform:scale(0.5)} 70%{transform:scale(1.1)} 100%{opacity:1;transform:scale(1)} }
 @keyframes timerPulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
 @keyframes scoreFloat { 0%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-40px)} }
+@keyframes stepBounce { 0%{transform:scale(1)} 30%{transform:scale(1.2)} 60%{transform:scale(0.95)} 100%{transform:scale(1)} }
+@keyframes stepShake { 0%,100%{transform:translateX(0)} 15%{transform:translateX(-6px)} 30%{transform:translateX(6px)} 45%{transform:translateX(-4px)} 60%{transform:translateX(4px)} 75%{transform:translateX(-2px)} 90%{transform:translateX(2px)} }
+.opt-btn.anim-step-correct { animation: stepBounce 0.4s ease; }
+.opt-btn.anim-step-wrong { animation: stepShake 0.5s ease; background: rgba(239,68,68,0.3) !important; border-color: #ef4444 !important; }
 
 /* ===== 首页 ===== */
 #view-home { padding: 20px; justify-content: center; gap: 24px; }
@@ -263,7 +267,7 @@ body {
     color: var(--accent-2);
     margin-top: 8px;
     letter-spacing: 4px;
-    min-height: 68px;
+    min-height: 88px;
     display: flex; align-items: center; justify-content: center;
 }
 .current-pinyin .placeholder { color: var(--text-muted); font-size: 28px; letter-spacing: 8px; }
@@ -314,13 +318,19 @@ body {
 }
 .opt-btn.disabled { opacity: 0.4; pointer-events: none; }
 
-/* 特殊选项：整体认读/不用声母 */
+/* 特殊选项：整体认读/不用声母 - 长方形按钮 */
 .opt-btn.special-opt {
     background: rgba(108,92,231,0.15);
     border-color: rgba(108,92,231,0.5);
-    font-size: 14px;
+    font-size: calc(var(--opt-font-size) * 0.7);
     aspect-ratio: auto;
     padding: 10px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.2;
+    word-break: break-all;
+    min-height: 40px;
 }
 .opt-btn.special-opt:hover {
     border-color: var(--accent-2);
@@ -330,6 +340,17 @@ body {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 8px;
     margin-top: 8px;
+}
+/* 整体认读音节选项 - 正方形按钮 */
+.whole-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+}
+.opt-btn.whole-opt {
+    font-size: 16px;
+    aspect-ratio: 1 / 1;
+    min-height: 48px;
+    padding: 4px;
 }
 
 /* 声调按钮特殊样式 */
@@ -784,4 +805,94 @@ input[type="range"]::-webkit-slider-thumb {
 }
 .file-modal-box iframe {
     width: 100%; height: 100%; border: none;
+}
+
+/* ===== 登录界面 ===== */
+#view-login {
+    padding: 20px;
+    justify-content: flex-start;
+    gap: 16px;
+    padding-top: 40px;
+}
+
+.login-header {
+    text-align: center;
+}
+
+.login-subtitle {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-top: 8px;
+}
+
+.login-frame-wrap {
+    flex: 1;
+    min-height: 0;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid var(--border-color);
+}
+
+.login-frame-wrap iframe {
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+    border: none;
+}
+
+/* 设置页账号管理按钮样式 */
+.btn-danger-sm {
+    background: rgba(239,68,68,0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 6px;
+    padding: 6px 16px;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.btn-danger-sm:hover {
+    background: rgba(239,68,68,0.25);
+}
+
+.btn-logout-sm {
+    background: rgba(239,68,68,0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    margin-left: 6px;
+    transition: var(--transition);
+}
+.btn-logout-sm:hover {
+    background: rgba(239,68,68,0.3);
+}
+
+/* Modal按钮样式 */
+.btn-modal-cancel {
+    padding: 8px 20px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    margin: 0 4px;
+}
+.btn-modal-primary {
+    padding: 8px 20px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+    color: white;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    margin: 0 4px;
 }

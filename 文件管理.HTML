@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -145,9 +145,32 @@ let DEVICE_ID=(()=>{
   return id;
 })();
 
-// 用户认证信息：用户名+密码，持久化到localStorage
-let AUTH_USERNAME=(()=>{return localStorage.getItem('PINYINLIANXI_auth_user')||'test';})();
-let AUTH_PASSWORD=(()=>{return localStorage.getItem('PINYINLIANXI_auth_pass')||'1234';})();
+// 用户认证信息：动态从localStorage读取，确保与登录系统同步
+let AUTH_USERNAME=localStorage.getItem('PINYINLIANXI_auth_user')||'test';
+let AUTH_PASSWORD=localStorage.getItem('PINYINLIANXI_auth_pass')||'1234';
+
+// 每次使用前刷新认证信息（确保登录后同步最新用户名密码）
+function refreshAuth(){
+  const u=localStorage.getItem('PINYINLIANXI_auth_user');
+  const p=localStorage.getItem('PINYINLIANXI_auth_pass');
+  if(u){AUTH_USERNAME=u;}
+  if(p){AUTH_PASSWORD=p;}
+}
+
+// 监听父窗口发来的认证信息更新
+window.addEventListener('message',function(e){
+  if(!e.data||typeof e.data!=='object')return;
+  if(e.data.type==='updateAuth'&&e.data.username){
+    AUTH_USERNAME=e.data.username;
+    AUTH_PASSWORD=e.data.password||'';
+    localStorage.setItem('PINYINLIANXI_auth_user',AUTH_USERNAME);
+    localStorage.setItem('PINYINLIANXI_auth_pass',AUTH_PASSWORD);
+    const ui=document.getElementById('usernameInput');
+    const pi=document.getElementById('passwordInput');
+    if(ui)ui.value=AUTH_USERNAME;
+    if(pi)pi.value=AUTH_PASSWORD;
+  }
+});
 
 function saveAuthInfo(){
   const u=document.getElementById('usernameInput').value.trim();
@@ -162,6 +185,7 @@ function saveAuthInfo(){
 }
 
 function initAuthBar(){
+  refreshAuth();
   document.getElementById('deviceIdInput').value=DEVICE_ID;
   document.getElementById('usernameInput').value=AUTH_USERNAME;
   document.getElementById('passwordInput').value=AUTH_PASSWORD;
@@ -571,6 +595,7 @@ async function getNetworkTime(){
 }
 
 async function callCloudAPI(action,params={}){
+  refreshAuth(); // 每次API调用前刷新认证信息
   const config=getSyncConfig();
   if(!config.enabled)return{status:'error',message:'云同步未启用',isNetworkError:false};
   // 写操作自动加入设备标识（用于云端抢锁）

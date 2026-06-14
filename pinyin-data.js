@@ -27,6 +27,12 @@ var PinyinData = {
   baseFinals: ['a','ai','an','ang','ao','e','ei','en','eng','er','ie','i','in','ing','o','ong','ou','iu','u','un','ui','ü','ün'],
   finals: ['a','ai','an','ang','ao','e','ei','en','eng','er','ie','i','in','ing','o','ong','ou','iu','u','un','ui','ü','ün','üe'],
   wholeSyllables: ['zhi','chi','shi','ri','zi','ci','si','yi','wu','yu','ye','yue','yuan','yin','yun','ying'],
+  // 相似整体认读音节分组，用于生成干扰选项
+  wholeSyllableGroups: [
+    ['zhi','chi','shi','ri','zi','ci','si'],    // 卷舌/平舌组
+    ['yi','yu','ye','yue','yuan','yin','yun','ying'], // y系组
+    ['wu']                                       // w系
+  ],
 
   tones: [
     { id: 1, name: '第一声', symbol: 'ˉ' },

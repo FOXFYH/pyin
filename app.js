@@ -119,15 +119,15 @@
     var DIFFICULTY = {
         easy: {
             name: '简单', baseScore: 10, timer: 30,
-            initialCount: 8, finalCount: 8
+            initialCount: 5, medialCount: 5, finalCount: 5, wholeCount: 5
         },
         medium: {
             name: '中等', baseScore: 15, timer: 20,
-            initialCount: 14, finalCount: 14
+            initialCount: 10, medialCount: 10, finalCount: 10, wholeCount: 10
         },
         hard: {
             name: '困难', baseScore: 20, timer: 12,
-            initialCount: 23, finalCount: 24
+            initialCount: 15, medialCount: 15, finalCount: 15, wholeCount: 15
         }
     };
 
@@ -144,7 +144,9 @@
             baseScore: s[diff + 'Score'] || base.baseScore,
             timer: s[diff + 'Timer'] || base.timer,
             initialCount: base.initialCount,
-            finalCount: base.finalCount
+            medialCount: base.medialCount,
+            finalCount: base.finalCount,
+            wholeCount: base.wholeCount
         };
     }
 
@@ -177,7 +179,7 @@
             return this.get('settings', {
                 penaltyRate: 100,
                 soundEnabled: true,
-                syncEnabled: false,
+                syncEnabled: true,
                 charsPerSession: 30,
                 reviewRatio: 30,
                 easyTimer: 30, mediumTimer: 20, hardTimer: 12,
@@ -453,6 +455,8 @@
         playCorrect: function () { var s = this; s.playTone(880, 0.15, 'sine', 0.3); setTimeout(function () { s.playTone(1175, 0.25, 'sine', 0.3); }, 120); },
         playWrong: function () { this.playTone(200, 0.4, 'sawtooth', 0.2); },
         playClick: function () { this.playTone(800, 0.08, 'square', 0.15); },
+        playStepCorrect: function () { var s = this; s.playTone(660, 0.1, 'sine', 0.25); setTimeout(function () { s.playTone(880, 0.15, 'sine', 0.25); }, 80); },
+        playStepWrong: function () { this.playTone(180, 0.25, 'sawtooth', 0.2); this.playTone(140, 0.3, 'square', 0.15); },
         playCountdown: function () { this.playTone(440, 0.1, 'sine', 0.15); },
         playVictory: function () { var s = this; [523, 659, 784, 1047, 784, 1047].forEach(function (f, i) { setTimeout(function () { s.playTone(f, 0.25, 'sine', 0.3); }, i * 150); }); },
         toggle: function () { this.enabled = !this.enabled; var s = App.Storage.getSettings(); s.soundEnabled = this.enabled; App.Storage.setSettings(s); }
@@ -576,7 +580,9 @@
         render: function () {
             var student = App.Storage.getStudent();
             var lv = getLevel(student.totalPoints);
-            document.getElementById('home-student-name').textContent = student.name || '未设置';
+            // 显示登录用户名
+            var authUser = App.Auth.getUsername();
+            document.getElementById('home-student-name').textContent = authUser || student.name || '未设置';
             document.getElementById('home-student-level').textContent = 'Lv.' + lv.lv;
             document.getElementById('home-total-points').textContent = student.totalPoints;
             var acc = student.totalCount > 0 ? Math.round(student.totalCorrect / student.totalCount * 100) : 0;
@@ -781,6 +787,17 @@
             if (saved) this._optionFontSize = Math.max(this._optionFontSizeMin, Math.min(this._optionFontSizeMax, saved));
         },
 
+        // 步骤动画辅助
+        _animStepBtn: function (btn, isCorrect) {
+            if (!btn) return;
+            var cls = isCorrect ? 'anim-step-correct' : 'anim-step-wrong';
+            btn.classList.remove('anim-step-correct', 'anim-step-wrong');
+            // 强制重绘以重新触发动画
+            void btn.offsetWidth;
+            btn.classList.add(cls);
+            setTimeout(function () { btn.classList.remove(cls); }, isCorrect ? 400 : 500);
+        },
+
         showQuestion: function () {
             if (this.currentIndex >= this.questions.length) {
                 this.endSession();
@@ -892,6 +909,17 @@
 
             // 介母选项（i, u, ü + 无介母）
             var medials = ['i', 'u', 'ü'];
+            // 按难度限制介母选项数量
+            if (diffConfig.medialCount < medials.length + 1) {
+                var correctMedial = correctParsed.medial || '';
+                var selM = [];
+                for (var mi = 0; mi < medials.length && selM.length < diffConfig.medialCount - 1; mi++) {
+                    if (medials[mi] !== correctMedial) selM.push(medials[mi]);
+                }
+                selM = selM.slice(0, diffConfig.medialCount - 1);
+                if (correctMedial) selM.push(correctMedial);
+                medials = selM;
+            }
 
             var gridMedial = document.getElementById('grid-medial');
             gridMedial.innerHTML = '';
@@ -988,15 +1016,18 @@
             if (val === '整体认读') {
                 var wholeParses = validParses.filter(function (p) { return p.isWhole; });
                 if (wholeParses.length > 0) {
+                    App.Sound.playStepCorrect();
+                    this._animStepBtn(btn, true);
                     this.selectedInitial = '整体认读';
-                    this.selectedMedial = '';
-                    // 取第一个匹配的解析来确定韵母
-                    this.selectedFinal = wholeParses[0].base;
                     this._matchingParses = wholeParses;
+                    // 构建整体认读音节选项
+                    this._buildWholeOptions(wholeParses);
+                    this.currentStep = 'whole';
                     this.updatePinyinDisplay();
-                    this.currentStep = 'tone';
-                    this.showStep('tone');
+                    this.showStep('whole');
                 } else {
+                    App.Sound.playStepWrong();
+                    this._animStepBtn(btn, false);
                     this.updatePinyinDisplay();
                     this.confirmAnswer();
                 }
@@ -1005,6 +1036,8 @@
             if (val === '不用声母') {
                 var noInitParses = validParses.filter(function (p) { return !p.isWhole && !p.initial; });
                 if (noInitParses.length > 0) {
+                    App.Sound.playStepCorrect();
+                    this._animStepBtn(btn, true);
                     this.selectedInitial = '不用声母';
                     this._matchingParses = noInitParses;
                     this.updatePinyinDisplay();
@@ -1019,6 +1052,8 @@
                         this.showStep('final');
                     }
                 } else {
+                    App.Sound.playStepWrong();
+                    this._animStepBtn(btn, false);
                     this.updatePinyinDisplay();
                     this.confirmAnswer();
                 }
@@ -1029,11 +1064,15 @@
             var initParses = validParses.filter(function (p) { return !p.isWhole && p.initial && p.initial === val; });
             if (initParses.length === 0) {
                 // 没有任何合法解析匹配此声母，判错
+                App.Sound.playStepWrong();
+                this._animStepBtn(btn, false);
                 this.updatePinyinDisplay();
                 this.confirmAnswer();
                 return;
             }
 
+            App.Sound.playStepCorrect();
+            this._animStepBtn(btn, true);
             this._matchingParses = initParses;
             this.updatePinyinDisplay();
             // 判断匹配的解析中是否有介母
@@ -1055,6 +1094,80 @@
             }
         },
 
+        // 构建整体认读音节选项，优先选择相似的干扰项
+        _buildWholeOptions: function (wholeParses) {
+            var correctBases = wholeParses.map(function (p) { return p.base; });
+            var diffConfig = getDiffConfig(this.difficulty);
+            var optionCount = diffConfig.wholeCount || 5;
+            // 确保不超过整体认读音节总数
+            optionCount = Math.min(optionCount, PinyinData.wholeSyllables.length);
+            console.log('[整体认读] 难度:', this.difficulty, '选项数:', optionCount, 'wholeCount配置:', diffConfig.wholeCount);
+
+            // 找到正确答案所在的相似组
+            var candidates = [];
+            var correctBase = correctBases[0];
+
+            // 优先从同一相似组中选干扰项
+            PinyinData.wholeSyllableGroups.forEach(function (group) {
+                if (group.indexOf(correctBase) >= 0) {
+                    group.forEach(function (s) {
+                        if (correctBases.indexOf(s) < 0 && candidates.indexOf(s) < 0) {
+                            candidates.push(s);
+                        }
+                    });
+                }
+            });
+
+            // 补充其他整体认读音节作为干扰
+            PinyinData.wholeSyllables.forEach(function (s) {
+                if (correctBases.indexOf(s) < 0 && candidates.indexOf(s) < 0) {
+                    candidates.push(s);
+                }
+            });
+
+            // 截取所需数量
+            candidates = candidates.slice(0, optionCount - correctBases.length);
+
+            // 合并正确答案和干扰项
+            var options = correctBases.concat(candidates);
+            // 打乱顺序
+            for (var i = options.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var tmp = options[i]; options[i] = options[j]; options[j] = tmp;
+            }
+
+            var grid = document.getElementById('grid-whole');
+            grid.innerHTML = '';
+            var self = this;
+            options.forEach(function (base) {
+                var btn = document.createElement('button');
+                btn.className = 'opt-btn whole-opt';
+                btn.textContent = base;
+                btn.setAttribute('data-value', base);
+                btn.onclick = function () { self.selectWhole(base, btn); };
+                grid.appendChild(btn);
+            });
+        },
+
+        // 选择整体认读音节
+        selectWhole: function (val, btn) {
+            if (this.currentStep !== 'whole' || this.answered) return;
+            App.Sound.playStepCorrect();
+            if (btn) this._animStepBtn(btn, true);
+
+            // 高亮选中按钮
+            document.querySelectorAll('#grid-whole .opt-btn').forEach(function (b) {
+                b.classList.remove('selected');
+            });
+            if (btn) btn.classList.add('selected');
+
+            this.selectedMedial = '';
+            this.selectedFinal = val;
+            this.currentStep = 'tone';
+            this.updatePinyinDisplay();
+            this.showStep('tone');
+        },
+
         selectMedial: function (val, btn) {
             if (this.currentStep !== 'medial' || this.answered) return;
             App.Sound.playClick();
@@ -1070,10 +1183,14 @@
             });
             if (medialParses.length === 0) {
                 // 没有任何匹配解析，判错
+                App.Sound.playStepWrong();
+                this._animStepBtn(btn, false);
                 this.confirmAnswer();
                 return;
             }
 
+            App.Sound.playStepCorrect();
+            this._animStepBtn(btn, true);
             this._matchingParses = medialParses;
             // 自动推进到韵母
             this.currentStep = 'final';
@@ -1096,10 +1213,14 @@
             });
             if (finalParses.length === 0) {
                 // 没有任何匹配解析，判错
+                App.Sound.playStepWrong();
+                this._animStepBtn(btn, false);
                 this.confirmAnswer();
                 return;
             }
 
+            App.Sound.playStepCorrect();
+            this._animStepBtn(btn, true);
             this._matchingParses = finalParses;
             // 选完韵母，直接进入声调选择
             this.currentStep = 'tone';
@@ -1131,11 +1252,15 @@
             });
             if (toneParses.length === 0) {
                 // 没有任何匹配解析，判错
+                App.Sound.playStepWrong();
+                this._animStepBtn(btn, false);
                 this.updatePinyinDisplay();
                 this.confirmAnswer();
                 return;
             }
 
+            App.Sound.playStepCorrect();
+            this._animStepBtn(btn, true);
             this._matchingParses = toneParses;
 
             // 判断是否需要标调位置步骤：只有多个元音才需要
@@ -1175,6 +1300,11 @@
 
             if (!final_ && !init && !med) {
                 el.innerHTML = '<span class="placeholder">_ _ _</span>';
+                return;
+            }
+            // 整体认读步骤中，还没选具体音节
+            if (this.selectedInitial === '整体认读' && !final_) {
+                el.innerHTML = '<span class="placeholder">整体认读 ?</span>';
                 return;
             }
 
@@ -1239,7 +1369,6 @@
         // 点击拼音卡片上的字母（标调位置）
         onPinyinCharClick: function (baseIdx, span) {
             if (this.answered) return;
-            App.Sound.playClick();
 
             var baseStr = this._getFinalBaseStr();
             // j/q/x/y 后的 ü 写成 u
@@ -1251,12 +1380,14 @@
 
             if (baseIdx !== correctIdx) {
                 // 标调位置选错，立刻判错
+                App.Sound.playStepWrong();
                 this.selectedTonePos = baseIdx;
                 this.confirmAnswer();
                 return;
             }
 
-            // 正确：标调位置选中，自动结算
+            // 正确：标调位置选中
+            App.Sound.playStepCorrect();
             this.selectedTonePos = baseIdx;
             // 高亮选中的字母
             var el = document.getElementById('current-pinyin');
@@ -1276,8 +1407,8 @@
 
         // 推送式：只显示当前步骤的选择区
         showStep: function (step) {
-            var sections = ['initial', 'medial', 'final', 'tone'];
-            var labels = { initial: '声母', medial: '介母', final: '韵母', tonepos: '标调位置', tone: '声调' };
+            var sections = ['initial', 'whole', 'medial', 'final', 'tone'];
+            var labels = { initial: '声母', whole: '整体认读音节', medial: '介母', final: '韵母', tonepos: '标调位置', tone: '声调' };
             sections.forEach(function (s) {
                 var el = document.getElementById('section-' + s);
                 if (s === step) {
@@ -1368,6 +1499,7 @@
                 App.CharProb.onCorrect(q.semesterId || this.semesterId, q.char);
                 App.Sound.playCorrect();
                 App.FX.showScorePopup(totalPts, true);
+                App.FX.spawnConfetti(null, null, 25);
 
                 this.charResults[q.char] = 'correct';
             } else {
@@ -1397,11 +1529,13 @@
 
         highlightAnswers: function (initCorrect, medialCorrect, finalCorrect, toneCorrect, correctInit, correctMedial, correctFinal, correctTone) {
             // 结算后显示所有步骤的按钮用于高亮
-            var sections = ['initial', 'medial', 'final', 'tonepos', 'tone'];
+            var sections = ['initial', 'whole', 'medial', 'final', 'tonepos', 'tone'];
             sections.forEach(function (s) {
                 var el = document.getElementById('section-' + s);
-                el.style.display = '';
-                el.classList.remove('active-step');
+                if (el) {
+                    el.style.display = '';
+                    el.classList.remove('active-step');
+                }
             });
             // 隐藏步骤提示
             var hint = document.getElementById('step-hint');
@@ -1428,6 +1562,17 @@
                 if (validInits.indexOf(b.getAttribute('data-value')) >= 0) b.classList.add('correct');
                 else if (b.classList.contains('selected') && !initCorrect) b.classList.add('wrong');
             });
+            // 高亮整体认读音节
+            var isWholeSyllable = correctInit === '整体认读';
+            document.querySelectorAll('#grid-whole .opt-btn').forEach(function (b) {
+                if (validFinals.indexOf(b.getAttribute('data-value')) >= 0) b.classList.add('correct');
+                else if (b.classList.contains('selected') && !finalCorrect) b.classList.add('wrong');
+            });
+            // 如果不是整体认读，隐藏整体认读选项区
+            if (!isWholeSyllable) {
+                var wholeSection = document.getElementById('section-whole');
+                if (wholeSection) wholeSection.style.display = 'none';
+            }
             // 高亮介母
             document.querySelectorAll('#grid-medial .opt-btn').forEach(function (b) {
                 if (validMedials.indexOf(b.getAttribute('data-value')) >= 0) b.classList.add('correct');
@@ -1478,60 +1623,54 @@
                 }).join(' / ');
             }
 
-            // 构建分解信息
+            // 构建分解信息（答对和答错都显示）
             var breakdownHTML = '';
-            if (!isCorrect) {
-                breakdownHTML = '<div class="feedback-breakdown">';
-                // 完整拼音
-                breakdownHTML += '<div class="feedback-full-pinyin">' + allPinyinStr + '</div>';
+            breakdownHTML = '<div class="feedback-breakdown">';
+            // 完整拼音
+            breakdownHTML += '<div class="feedback-full-pinyin">' + allPinyinStr + '</div>';
 
-                if (correctParsed.isWhole) {
-                    // 整体认读音节
-                    breakdownHTML += '<div class="feedback-decomp"><span class="decomp-label">整体认读</span><span class="decomp-value">' + correctParsed.base + '</span></div>';
-                } else {
-                    // 声母
-                    if (correctParsed.initial) {
-                        breakdownHTML += '<div class="feedback-decomp"><span class="decomp-label">声母</span><span class="decomp-value">' + correctParsed.initial + '</span></div>';
-                    } else {
-                        breakdownHTML += '<div class="feedback-decomp"><span class="decomp-label">不用声母</span><span class="decomp-value">-</span></div>';
-                    }
-                    // 介母
-                    if (correctParsed.medial) {
-                        breakdownHTML += '<div class="feedback-decomp"><span class="decomp-label">介母</span><span class="decomp-value">' + correctParsed.medial + '</span></div>';
-                    }
-                    // 韵母
-                    breakdownHTML += '<div class="feedback-decomp"><span class="decomp-label">韵母</span><span class="decomp-value">' + correctParsed.final + '</span></div>';
-                }
-
-                // 声调
-                var toneName = correctParsed.tone ? '第' + correctParsed.tone + '声' : '轻声';
-                var toneSymbol = correctParsed.tone ? PinyinData.tones[correctParsed.tone - 1].symbol : '·';
-                breakdownHTML += '<div class="feedback-decomp"><span class="decomp-label">声调</span><span class="decomp-value">' + toneSymbol + ' ' + toneName + '</span></div>';
-
-                // 标调位置
-                var baseStr = correctParsed.isWhole ? correctParsed.base : (correctParsed.medial || '') + correctParsed.final;
-                var init = correctParsed.initial || '';
-                if (init && 'jqxy'.indexOf(init) >= 0) {
-                    baseStr = baseStr.replace(/ü/g, 'u');
-                }
-                var tonePos = PinyinData.getTonePosition(baseStr);
-                if (tonePos >= 0) {
-                    var tonedChar = baseStr[tonePos];
-                    var fullBase = (correctParsed.initial || '') + baseStr;
-                    breakdownHTML += '<div class="feedback-decomp"><span class="decomp-label">标调位置</span><span class="decomp-value">' + fullBase + ' 中的 <strong>' + tonedChar + '</strong></span></div>';
-                }
-
-                breakdownHTML += '</div>';
-            }
-
-            pinyin.innerHTML = isCorrect ? allPinyinStr : breakdownHTML;
-
-            // 答错时显示确定按钮
-            if (!isCorrect) {
-                confirmBtn.classList.remove('hidden');
+            if (correctParsed.isWhole) {
+                // 整体认读音节
+                breakdownHTML += '<div class="feedback-decomp"><span class="decomp-label">整体认读</span><span class="decomp-value">' + correctParsed.base + '</span></div>';
             } else {
-                confirmBtn.classList.add('hidden');
+                // 声母
+                if (correctParsed.initial) {
+                    breakdownHTML += '<div class="feedback-decomp"><span class="decomp-label">声母</span><span class="decomp-value">' + correctParsed.initial + '</span></div>';
+                } else {
+                    breakdownHTML += '<div class="feedback-decomp"><span class="decomp-label">不用声母</span><span class="decomp-value">-</span></div>';
+                }
+                // 介母
+                if (correctParsed.medial) {
+                    breakdownHTML += '<div class="feedback-decomp"><span class="decomp-label">介母</span><span class="decomp-value">' + correctParsed.medial + '</span></div>';
+                }
+                // 韵母
+                breakdownHTML += '<div class="feedback-decomp"><span class="decomp-label">韵母</span><span class="decomp-value">' + correctParsed.final + '</span></div>';
             }
+
+            // 声调
+            var toneName = correctParsed.tone ? '第' + correctParsed.tone + '声' : '轻声';
+            var toneSymbol = correctParsed.tone ? PinyinData.tones[correctParsed.tone - 1].symbol : '·';
+            breakdownHTML += '<div class="feedback-decomp"><span class="decomp-label">声调</span><span class="decomp-value">' + toneSymbol + ' ' + toneName + '</span></div>';
+
+            // 标调位置
+            var baseStr = correctParsed.isWhole ? correctParsed.base : (correctParsed.medial || '') + correctParsed.final;
+            var init = correctParsed.initial || '';
+            if (init && 'jqxy'.indexOf(init) >= 0) {
+                baseStr = baseStr.replace(/ü/g, 'u');
+            }
+            var tonePos = PinyinData.getTonePosition(baseStr);
+            if (tonePos >= 0) {
+                var tonedChar = baseStr[tonePos];
+                var fullBase = (correctParsed.initial || '') + baseStr;
+                breakdownHTML += '<div class="feedback-decomp"><span class="decomp-label">标调位置</span><span class="decomp-value">' + fullBase + ' 中的 <strong>' + tonedChar + '</strong></span></div>';
+            }
+
+            breakdownHTML += '</div>';
+
+            pinyin.innerHTML = breakdownHTML;
+
+            // 始终显示确定按钮
+            confirmBtn.classList.remove('hidden');
 
             var self = this;
             if (this._feedbackTimer) { clearTimeout(this._feedbackTimer); this._feedbackTimer = null; }
@@ -1790,6 +1929,9 @@
 
             // 显示结果
             this.showResult(totalScore, baseScoreTotal, timeBonusTotal, gradeBonus, gradeResult, accuracy, earnedBadges, earlyEnd);
+
+            // 比赛结束后自动同步到云端
+            App.FileSync.uploadData();
         },
 
         updateSemesterProgress: function (accuracy) {
@@ -2036,7 +2178,6 @@
             document.getElementById('setting-max-bonus-val').textContent = (s.maxBonus || 40) + '%';
             // 系统设置
             document.getElementById('setting-sound').checked = s.soundEnabled !== false;
-            document.getElementById('setting-sync').checked = s.syncEnabled === true;
             document.getElementById('setting-auto-save').value = s.autoSaveInterval || 1;
             document.getElementById('setting-auto-save-val').textContent = s.autoSaveInterval || 1;
             document.getElementById('setting-feedback-font-size').value = s.feedbackFontSize || 28;
@@ -2105,10 +2246,6 @@
             document.getElementById('setting-sound').onchange = function () {
                 var s = App.Storage.getSettings(); s.soundEnabled = this.checked; App.Storage.setSettings(s); App.Sound.enabled = this.checked;
             };
-            document.getElementById('setting-sync').onchange = function () {
-                var s = App.Storage.getSettings(); s.syncEnabled = this.checked; App.Storage.setSettings(s);
-                if (this.checked) { App.FileSync.startAutoSave(); } else { App.FileSync.stopAutoSave(); }
-            };
             document.getElementById('setting-auto-save').oninput = function () {
                 document.getElementById('setting-auto-save-val').textContent = this.value;
                 var s = App.Storage.getSettings(); s.autoSaveInterval = parseInt(this.value); App.Storage.setSettings(s);
@@ -2148,6 +2285,107 @@
             App.Modal.close();
             App.Toast.show('数据已重置', 'success');
             App.Home.render();
+        }
+    };
+
+    // ===== 认证模块 =====
+    App.Auth = {
+        STORAGE_KEY_USER: STORAGE_PREFIX + 'auth_user',
+        STORAGE_KEY_PASS: STORAGE_PREFIX + 'auth_pass',
+        STORAGE_KEY_LOGGED_IN: STORAGE_PREFIX + 'auth_logged_in',
+
+        // 获取当前登录用户名
+        getUsername: function () {
+            return localStorage.getItem(this.STORAGE_KEY_USER) || '';
+        },
+
+        // 获取当前登录密码
+        getPassword: function () {
+            return localStorage.getItem(this.STORAGE_KEY_PASS) || '';
+        },
+
+        // 是否已登录
+        isLoggedIn: function () {
+            var flag = localStorage.getItem(this.STORAGE_KEY_LOGGED_IN);
+            // 兼容：如果从未设置过登录标记，但有本地数据，视为已登录
+            if (flag === null) {
+                var hasLocalData = localStorage.getItem(STORAGE_PREFIX + 'student') !== null;
+                if (hasLocalData) {
+                    // 自动标记为已登录（老用户兼容）
+                    localStorage.setItem(this.STORAGE_KEY_LOGGED_IN, 'true');
+                    return true;
+                }
+                return false;
+            }
+            return flag === 'true';
+        },
+
+        // 登录成功后调用
+        onLoginSuccess: function (username, password) {
+            localStorage.setItem(this.STORAGE_KEY_USER, username);
+            localStorage.setItem(this.STORAGE_KEY_PASS, password);
+            localStorage.setItem(this.STORAGE_KEY_LOGGED_IN, 'true');
+            // 初始化主应用并切换到首页
+            App._initMainApp();
+            // 传递认证信息到文件管理器
+            App.Auth.syncAuthToFileManager();
+            // 登录后从云端同步数据
+            setTimeout(function () {
+                App.FileSync.syncData();
+            }, 1500);
+            App.Toast.show('欢迎，' + username, 'success');
+        },
+
+        // 退出登录
+        logout: function () {
+            App.Modal.open('确认退出', '<p style="text-align:center;color:var(--warning)">退出后需要重新登录才能使用应用</p>',
+                '<button class="btn-modal-cancel" onclick="App.Modal.close()">取消</button>' +
+                '<button class="btn-modal-primary" onclick="App.Auth.doLogout()">确认退出</button>');
+        },
+
+        doLogout: function () {
+            localStorage.setItem(this.STORAGE_KEY_LOGGED_IN, 'false');
+            App.Modal.close();
+            App.switchView('login');
+            App.Toast.show('已退出登录', 'info');
+        },
+
+        // 打开账号管理（弹出文件管理器中的denglu.html）
+        showAccountManager: function () {
+            var modal = document.getElementById('file-modal');
+            if (!modal) return;
+            modal.classList.add('active');
+            // 复用文件管理器弹窗，临时切换iframe src
+            var frame = document.getElementById('fileManagerFrame');
+            if (frame) {
+                frame.src = 'denglu.html?tab=changepwd';
+            }
+        },
+
+        // 将认证信息同步到文件管理器iframe
+        syncAuthToFileManager: function () {
+            var username = this.getUsername();
+            var password = this.getPassword();
+            if (!username) return;
+            // 等待文件管理器iframe加载完成后发送
+            var frame = document.getElementById('fileManagerFrame');
+            if (frame && frame.contentWindow) {
+                frame.contentWindow.postMessage({
+                    target: 'fileManager',
+                    type: 'updateAuth',
+                    username: username,
+                    password: password
+                }, '*');
+            }
+        },
+
+        // 检查登录状态，未登录则显示登录页
+        checkAuth: function () {
+            if (!this.isLoggedIn()) {
+                App.switchView('login');
+                return false;
+            }
+            return true;
         }
     };
 
@@ -2198,6 +2436,8 @@
                         autoSyncScope: 'all'
                     }
                 });
+                // 传递认证信息到文件管理器
+                App.Auth.syncAuthToFileManager();
             };
         },
 
@@ -2220,6 +2460,11 @@
         closeManager: function () {
             var modal = document.getElementById('file-modal');
             if (modal) modal.classList.remove('active');
+            // 恢复文件管理器iframe
+            var frame = document.getElementById('fileManagerFrame');
+            if (frame && frame.src.indexOf('denglu.html') > -1) {
+                frame.src = '文件管理.HTML';
+            }
         },
 
         // 导出所有本地数据为一个JSON字符串
@@ -2282,11 +2527,6 @@
         // 上传当前数据到云端
         uploadData: function () {
             if (this._syncing) return;
-            var s = App.Storage.getSettings();
-            if (!s.syncEnabled) {
-                App.Toast.show('请先开启云同步', 'info');
-                return;
-            }
             this._syncing = true;
             this._version++;
             var content = this.exportAllData();
@@ -2302,11 +2542,6 @@
         // 从云端同步数据
         syncData: function () {
             if (this._syncing) return;
-            var s = App.Storage.getSettings();
-            if (!s.syncEnabled) {
-                App.Toast.show('请先开启云同步', 'info');
-                return;
-            }
             this._syncing = true;
             // 先上传当前数据
             var content = this.exportAllData();
@@ -2321,11 +2556,6 @@
 
         // 同步所有文件
         syncAll: function () {
-            var s = App.Storage.getSettings();
-            if (!s.syncEnabled) {
-                App.Toast.show('请先开启云同步', 'info');
-                return;
-            }
             var content = this.exportAllData();
             this.postMsg({
                 type: 'setCurrentFile',
@@ -2443,11 +2673,9 @@
             var self = this;
             this.stopAutoSave();
             var s = App.Storage.getSettings();
-            if (!s.syncEnabled) return;
             var interval = (s.autoSaveInterval || 1) * 60000;
             this._autoSaveTimer = setInterval(function () {
-                var settings = App.Storage.getSettings();
-                if (settings.syncEnabled && !self._syncing) {
+                if (!self._syncing) {
                     self.uploadData();
                 }
             }, interval);
@@ -2479,6 +2707,25 @@
         if (!e.data || typeof e.data !== 'object') return;
         var msg = e.data;
         if (!msg.type) return;
+
+        // 处理登录iframe发来的登录成功消息
+        if (msg.type === 'loginSuccess') {
+            if (msg.username && msg.password) {
+                App.Auth.onLoginSuccess(msg.username, msg.password);
+            }
+            return;
+        }
+
+        // 修改密码成功
+        if (msg.type === 'passwordChanged') {
+            if (msg.username && msg.newPassword) {
+                localStorage.setItem(App.Auth.STORAGE_KEY_PASS, msg.newPassword);
+                App.Auth.syncAuthToFileManager();
+                App.Toast.show('密码已更新', 'success');
+            }
+            return;
+        }
+
         // 分发给FileSync处理
         if (App.FileSync) {
             App.FileSync.handleMessage(msg);
@@ -2491,31 +2738,40 @@
         App.FX.init();
         App.FileSync.initFrame();
         App.Exam._loadOptionFontSize();
+
+        // 检查登录状态
+        if (!App.Auth.checkAuth()) {
+            // 未登录，显示登录页，不初始化主应用
+            return;
+        }
+
+        // 已登录，初始化主应用
+        App._initMainApp();
+    };
+
+    // 主应用初始化标记
+    App._mainAppInitialized = false;
+
+    // 主应用初始化（登录后调用）
+    App._initMainApp = function () {
+        if (App._mainAppInitialized) return;
+        App._mainAppInitialized = true;
         // 应用保存的字体大小设置
         var s = App.Storage.getSettings();
         if (s.feedbackFontSize) document.documentElement.style.setProperty('--feedback-answer-size', s.feedbackFontSize + 'px');
         if (s.pinyinDisplaySize) document.documentElement.style.setProperty('--pinyin-display-size', s.pinyinDisplaySize + 'px');
-        App.Home.render();
+        // 显示首页
+        App.switchView('home');
         // 预加载当前学期数据
         var curSem = App.Semester.getCurrentSemester();
         PinyinData.loadSemester(curSem.id, function () {
             // 数据加载完成后刷新首页
             App.Home.render();
         });
-        // 同步开关变化时启停自动保存
-        var syncCheckbox = document.getElementById('setting-sync');
-        if (syncCheckbox) {
-            var origOnchange = syncCheckbox.onchange;
-            syncCheckbox.onchange = function () {
-                if (origOnchange) origOnchange.call(this);
-                var s = App.Storage.getSettings();
-                if (s.syncEnabled) {
-                    App.FileSync.startAutoSave();
-                } else {
-                    App.FileSync.stopAutoSave();
-                }
-            };
-        }
+        // 云同步始终开启，启动自动保存
+        App.FileSync.startAutoSave();
+        // 传递认证信息到文件管理器
+        App.Auth.syncAuthToFileManager();
     };
 
     // DOM Ready

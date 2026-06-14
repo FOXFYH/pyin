@@ -12,14 +12,27 @@
 
     <!-- 主界面 -->
     <div id="app">
+        <!-- 登录界面 -->
+        <section id="view-login" class="view">
+            <div class="login-header">
+                <div class="app-logo">拼</div>
+                <h1 class="app-title">拼音练习</h1>
+                <p class="login-subtitle">请先登录以使用应用</p>
+            </div>
+            <div class="login-frame-wrap">
+                <iframe id="loginFrame" src="denglu.html"></iframe>
+            </div>
+        </section>
+
         <!-- 首页 -->
-        <section id="view-home" class="view active">
+        <section id="view-home" class="view">
             <div class="home-header">
                 <div class="app-logo">拼</div>
                 <h1 class="app-title">拼音练习</h1>
-                <div class="student-info" id="home-student-info" onclick="App.switchView('profile')">
+                <div class="student-info" id="home-student-info">
                     <span class="student-name" id="home-student-name">未设置</span>
                     <span class="student-level-badge" id="home-student-level">Lv.1</span>
+                    <button class="btn-logout-sm" onclick="App.Auth.logout()" title="退出登录">退出</button>
                 </div>
             </div>
             <div class="home-stats">
@@ -108,6 +121,10 @@
                 <!-- 声母选择 -->
                 <div class="select-section" id="section-initial">
                     <div class="option-grid" id="grid-initial"></div>
+                </div>
+                <!-- 整体认读音节选择 -->
+                <div class="select-section" id="section-whole" style="display:none">
+                    <div class="option-grid whole-grid" id="grid-whole"></div>
                 </div>
                 <!-- 介母选择 -->
                 <div class="select-section" id="section-medial">
@@ -332,7 +349,7 @@
                 <div class="setting-item">
                     <span>云同步</span>
                     <div class="setting-control">
-                        <label class="switch"><input type="checkbox" id="setting-sync"><span class="slider"></span></label>
+                        <span style="color:var(--success);font-size:13px">已开启</span>
                     </div>
                 </div>
                 <div class="setting-item">
@@ -341,6 +358,14 @@
                         <input type="range" id="setting-auto-save" min="1" max="10" value="1" step="1">
                         <span id="setting-auto-save-val">1</span>
                     </div>
+                </div>
+                <div class="setting-item">
+                    <span>账号管理</span>
+                    <button class="btn-danger-sm" onclick="App.Auth.showAccountManager()">管理</button>
+                </div>
+                <div class="setting-item">
+                    <span>退出登录</span>
+                    <button class="btn-danger-sm" onclick="App.Auth.logout()">退出</button>
                 </div>
                 <div class="setting-item">
                     <span>重置数据</span>
