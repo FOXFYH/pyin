@@ -32,6 +32,7 @@
                 <div class="student-info" id="home-student-info">
                     <span class="student-name" id="home-student-name">未设置</span>
                     <span class="student-level-badge" id="home-student-level">Lv.1</span>
+                    <span class="sync-status" id="home-sync-status" title="同步状态">☁️</span>
                     <button class="btn-logout-sm" onclick="App.Auth.logout()" title="退出登录">退出</button>
                 </div>
             </div>
@@ -65,21 +66,29 @@
             <div class="difficulty-cards">
                 <div class="diff-card" data-diff="easy" onclick="App.Exam.selectDifficulty('easy')">
                     <div class="diff-icon">🌟</div>
-                    <div class="diff-name">简单</div>
-                    <div class="diff-desc">少量选项，较长倒计时</div>
-                    <div class="diff-score">每字 10 分</div>
+                    <div class="diff-info">
+                        <div class="diff-name">简单</div>
+                        <div class="diff-desc">少量选项，较长倒计时</div>
+                        <div class="diff-score">每字 10 分</div>
+                    </div>
                 </div>
                 <div class="diff-card" data-diff="medium" onclick="App.Exam.selectDifficulty('medium')">
                     <div class="diff-icon">🔥</div>
-                    <div class="diff-name">中等</div>
-                    <div class="diff-desc">较多选项，中等倒计时</div>
-                    <div class="diff-score">每字 15 分</div>
+                    <div class="diff-info">
+                        <div class="diff-name">中等</div>
+                        <div class="diff-desc">较多选项，中等倒计时</div>
+                        <div class="diff-score">每字 15 分</div>
+                    </div>
+                    <div class="diff-lock" id="lock-medium">🔒 简单模式完成学期解锁</div>
                 </div>
                 <div class="diff-card" data-diff="hard" onclick="App.Exam.selectDifficulty('hard')">
                     <div class="diff-icon">💀</div>
-                    <div class="diff-name">困难</div>
-                    <div class="diff-desc">全部选项，短倒计时</div>
-                    <div class="diff-score">每字 20 分</div>
+                    <div class="diff-info">
+                        <div class="diff-name">困难</div>
+                        <div class="diff-desc">全部选项，短倒计时</div>
+                        <div class="diff-score">每字 20 分</div>
+                    </div>
+                    <div class="diff-lock" id="lock-hard">🔒 中等模式完成学期解锁</div>
                 </div>
             </div>
             <div class="setup-info" id="setup-phase-info">
@@ -224,8 +233,12 @@
                 <h2>设置</h2>
             </div>
             <div class="settings-list">
-                <!-- 游戏参数 -->
-                <div class="setting-group-label">游戏参数</div>
+                <!-- 游戏参数（需密码解锁） -->
+                <div class="setting-group-label setting-locked-header" id="setting-lock-header" onclick="App.Settings.toggleLocked()">
+                    <span>游戏参数</span>
+                    <span class="lock-icon" id="setting-lock-icon">🔒</span>
+                </div>
+                <div class="setting-locked-group" id="setting-locked-group" style="display:none">
                 <div class="setting-item">
                     <span>惩罚概率</span>
                     <div class="setting-control">
@@ -323,6 +336,7 @@
                         <span id="setting-max-bonus-val">40%</span>
                     </div>
                 </div>
+                </div><!-- end setting-locked-group -->
 
                 <!-- 系统设置 -->
                 <div class="setting-group-label">系统设置</div>

