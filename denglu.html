@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <title>账号系统（标签切换版）</title>
   <style>
-    *{box-sizing:border-box;font-family:system-ui,sans-serif}
+    *{box-sizing:border-box;font-family:system-ui,sans-serif;-webkit-text-size-adjust:100%}
     body{margin:0;padding:10px;background:#f7f8fa}
     .card{background:#fff;border-radius:10px;padding:12px;box-shadow:0 1px 4px rgba(0,0,0,0.08)}
     .status{padding:6px 10px;border-radius:6px;margin:0 0 8px 0;font-size:13px}
@@ -14,7 +14,7 @@
     .status-info{background:#e3f2fd;color:#0d47a1}
 
     .tab-bar{display:flex;margin-bottom:10px;border-radius:6px;overflow:hidden}
-    .tab{flex:1;padding:9px 4px;text-align:center;cursor:pointer;border:none;background:#f1f3f5;font-size:14px;transition:background .2s;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+    .tab{flex:1;padding:9px 4px;text-align:center;cursor:pointer;border:none;background:#f1f3f5;font-size:14px;transition:background .2s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-appearance:none;appearance:none}
     .tab.active{background:#0071e3;color:#fff}
 
     .panel-container{position:relative}
@@ -23,16 +23,29 @@
 
     .section{margin-bottom:10px}
     label{font-weight:500;font-size:13px;margin-bottom:3px;display:block;color:#333}
-    input{border-radius:6px;border:1px solid #ddd;padding:9px 10px;font-size:16px;width:100%;outline:none;transition:border .2s;touch-action:manipulation}
-    input:focus{border-color:#0071e3}
-    button{border-radius:6px;border:none;color:#fff;padding:10px;width:100%;cursor:pointer;margin-top:6px;font-size:16px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+    input[type="text"],input[type="password"],input:not([type]){
+      -webkit-appearance:none;appearance:none;
+      border-radius:6px;border:1px solid #ddd;
+      padding:9px 10px;font-size:16px;width:100%;
+      outline:none;transition:border .2s;touch-action:manipulation;
+      background:#fff;color:#333;height:42px;line-height:normal;
+      display:block
+    }
+    input:focus{border-color:#0071e3;background:#fff}
+    button{
+      -webkit-appearance:none;appearance:none;
+      border-radius:6px;border:none;color:#fff;
+      padding:10px;width:100%;cursor:pointer;margin-top:6px;
+      font-size:16px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+      height:44px;line-height:normal;display:block
+    }
     .btn-register{background:#28a745}
     .btn-login{background:#0071e3}
     .btn-change{background:#17a2b8}
     .code-box{display:flex;align-items:center;gap:6px;margin-bottom:10px}
     .code-box label{white-space:nowrap;width:80px;margin:0;font-size:13px}
     .code-box input{flex:1;min-width:0}
-    .code-box button{width:auto;padding:8px 10px;background:#6c757d;white-space:nowrap;font-size:13px}
+    .code-box button{width:auto;padding:8px 10px;background:#6c757d;white-space:nowrap;font-size:13px;height:auto}
     .code-box button:disabled{background:#aaa}
     .log-box{display:none}
   </style>

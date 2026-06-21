@@ -2730,12 +2730,40 @@
         },
 
         resetData: function () {
-            App.Modal.open('确认重置', '<p style="text-align:center;color:var(--danger)">将清除所有学生数据、进度和勋章，此操作不可撤销！</p>',
+            App.Modal.open('确认重置', '<p style="text-align:center;color:var(--danger)">将清除云端和本地的所有数据，此操作不可撤销！</p>',
                 '<button class="btn-modal-cancel" onclick="App.Modal.close()">取消</button>' +
                 '<button class="btn-modal-primary" onclick="App.Settings.doReset()">确认重置</button>');
         },
 
         doReset: function () {
+            var self = this;
+            // 1. 先停止一切自动同步
+            App.FileSync.stopAutoSave();
+
+            // 2. 通知文件管理器删除云端数据（异步）
+            App.Toast.show('正在清理云端数据，请稍候...', 'info');
+            App.Modal.close();
+
+            // 注册一次性消息监听，等云端删完再清本地
+            var handlerKey = '_resetWaiting';
+            App.FileSync[handlerKey] = true;
+
+            // 发送删除云端数据指令
+            App.FileSync.postMsg({ type: 'deleteAllCloudData' });
+
+            // 设置超时兜底：30秒后如果没收到回复也清本地
+            var fallbackTimer = setTimeout(function () {
+                if (App.FileSync[handlerKey]) {
+                    App.FileSync[handlerKey] = false;
+                    self._doLocalReset();
+                }
+            }, 30000);
+
+            // 保存timer以便收到回复时清除
+            App.FileSync._resetFallbackTimer = fallbackTimer;
+        },
+
+        _doLocalReset: function () {
             // 清除所有PINYINLIANXI_前缀的数据
             var keysToRemove = [];
             for (var i = 0; i < localStorage.length; i++) {
@@ -2748,8 +2776,7 @@
             // 重置加载状态，以便重新加载学期数据
             PinyinData._loaded = {};
             PinyinData.chars = {};
-            App.Modal.close();
-            App.Toast.show('数据已重置', 'success');
+            App.Toast.show('数据已重置（云端+本地）', 'success');
             App.Home.render();
         }
     };
@@ -3132,6 +3159,9 @@
             var self = this;
             var fileIndex = getFileIndex();
 
+            // 0. ★系统设置：登录后先确保存在
+            this.ensureSystemSettings();
+
             // 1. 镜像文件：无论本地有没有，都请求打开
             // - 本地有 → openFileById 走先一致再打开
             // - 本地没有 → 文件管理器查云端缓存并自动下载
@@ -3256,6 +3286,36 @@
                     this._syncing = false;
                     break;
 
+                case 'systemSettingsEnsured':
+                    if (msg.success) {
+                        console.log('[★系统设置] 已确保存在');
+                    }
+                    break;
+
+                case 'systemSettingsRead':
+                    if (msg.settings) {
+                        console.log('[★系统设置] 读取成功:', msg.settings);
+                    }
+                    break;
+
+                case 'systemSettingsWritten':
+                    if (msg.success) {
+                        console.log('[★系统设置] 写入成功');
+                    }
+                    break;
+
+                case 'allCloudDataDeleted':
+                    // 云端数据已清理完毕，现在清本地
+                    if (this._resetFallbackTimer) {
+                        clearTimeout(this._resetFallbackTimer);
+                        this._resetFallbackTimer = null;
+                    }
+                    if (this._resetWaiting) {
+                        this._resetWaiting = false;
+                        App.Settings._doLocalReset();
+                    }
+                    break;
+
                 default:
                     break;
             }
@@ -3263,6 +3323,23 @@
 
         // 将云端下载的内容写入对应文件
         // 本地和云端都没有文件时，自动创建并发注册
+        // ===== ★系统设置 相关方法 =====
+
+        // 确保★系统设置存在（首次登录时调用）
+        ensureSystemSettings: function () {
+            this.postMsg({ type: 'ensureSystemSettings' });
+        },
+
+        // 读取★系统设置
+        readSystemSettings: function () {
+            this.postMsg({ type: 'readSystemSettings' });
+        },
+
+        // 写入★系统设置
+        writeSystemSettings: function (settings) {
+            this.postMsg({ type: 'writeSystemSettings', settings: settings });
+        },
+
         _createMissingFile: function (fileName) {
             var content = '';
             if (fileName === MIRROR_FILE_NAME) {
