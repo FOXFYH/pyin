@@ -5,34 +5,35 @@
   <title>账号系统（标签切换版）</title>
   <style>
     *{box-sizing:border-box;font-family:system-ui,sans-serif}
-    body{margin:0;padding:12px;background:#f7f8fa}
-    .card{background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,0.1)}
-    .status{padding:8px 10px;border-radius:6px;margin:0 0 10px 0;font-size:14px}
+    body{margin:0;padding:10px;background:#f7f8fa}
+    .card{background:#fff;border-radius:10px;padding:12px;box-shadow:0 1px 4px rgba(0,0,0,0.08)}
+    .status{padding:6px 10px;border-radius:6px;margin:0 0 8px 0;font-size:13px}
     .status-success{background:#e8f5e9;color:#1b5e20}
     .status-error{background:#ffebee;color:#b71c1c}
     .status-info{background:#e3f2fd;color:#0d47a1}
 
-    .tab-bar{display:flex;margin-bottom:10px}
-    .tab{flex:1;padding:10px;text-align:center;cursor:pointer;border:none;background:#f1f3f5}
+    .tab-bar{display:flex;margin-bottom:10px;border-radius:6px;overflow:hidden}
+    .tab{flex:1;padding:9px 4px;text-align:center;cursor:pointer;border:none;background:#f1f3f5;font-size:14px;transition:background .2s}
     .tab.active{background:#0071e3;color:#fff}
 
     .panel-container{position:relative}
     .panel{display:none}
     .panel.active{display:block}
 
-    .section{margin-bottom:12px}
-    label{font-weight:500;font-size:14px;margin-bottom:4px;display:block}
-    input{border-radius:6px;border:1px solid #ddd;padding:8px 10px;font-size:14px;width:100%}
-    button{border-radius:6px;border:none;color:#fff;padding:10px;width:100%;cursor:pointer;margin-top:6px}
+    .section{margin-bottom:10px}
+    label{font-weight:500;font-size:13px;margin-bottom:3px;display:block;color:#333}
+    input{border-radius:6px;border:1px solid #ddd;padding:9px 10px;font-size:15px;width:100%;outline:none;transition:border .2s}
+    input:focus{border-color:#0071e3}
+    button{border-radius:6px;border:none;color:#fff;padding:10px;width:100%;cursor:pointer;margin-top:6px;font-size:15px}
     .btn-register{background:#28a745}
     .btn-login{background:#0071e3}
     .btn-change{background:#17a2b8}
-    .code-box{display:flex;align-items:center;gap:8px;margin-bottom:12px}
-    .code-box label{white-space:nowrap;width:100px;margin:0}
-    .code-box input{flex:1}
-    .code-box button{width:auto;padding:8px 10px;background:#6c757d;white-space:nowrap}
+    .code-box{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+    .code-box label{white-space:nowrap;width:80px;margin:0;font-size:13px}
+    .code-box input{flex:1;min-width:0}
+    .code-box button{width:auto;padding:8px 10px;background:#6c757d;white-space:nowrap;font-size:13px}
     .code-box button:disabled{background:#aaa}
-    .log-box{height:120px;background:#f8f9fa;border:1px solid #ddd;border-radius:8px;padding:8px;font-size:12px;white-space:pre-wrap;overflow-y:auto;margin-top:6px}
+    .log-box{display:none}
   </style>
 </head>
 

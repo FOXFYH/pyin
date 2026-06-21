@@ -83,70 +83,21 @@
         return null;
     }
 
-    // ===== 勋章系统 =====
-    var BADGE_DEFS = [
-        { id: 'perfect', name: '完美无瑕', icon: '💎', desc: '单场100%正确率', check: function(s) { return s.accuracy === 100; }, prob: 0.7 },
-        { id: 'streak5', name: '五连绝世', icon: '🔥', desc: '连续答对5题', check: function(s) { return s.maxStreak >= 5; }, prob: 0.8 },
-        { id: 'streak10', name: '十全十美', icon: '🌟', desc: '连续答对10题', check: function(s) { return s.maxStreak >= 10; }, prob: 0.6 },
-        { id: 'streak20', name: '不可阻挡', icon: '⚡', desc: '连续答对20题', check: function(s) { return s.maxStreak >= 20; }, prob: 0.4 },
-        { id: 'streak30', name: '神之一手', icon: '👑', desc: '连续答对30题(全场连对)', check: function(s) { return s.maxStreak >= 30; }, prob: 0.3 },
-        { id: 'speed', name: '闪电快手', icon: '⚡', desc: '平均每题用时<5秒', check: function(s) { return s.avgTime > 0 && s.avgTime < 5; }, prob: 0.5 },
-        { id: 'corrector', name: '知错就改', icon: '🔄', desc: '答错后连续答对≥5题', check: function(s) { return s.earlyErrors > 0 && s.maxStreak >= 5; }, prob: 0.6 },
-        { id: 'tone_master', name: '声调达人', icon: '🎵', desc: '声调选择全部正确', check: function(s) { return s.toneCorrect === s.toneTotal && s.toneTotal > 0; }, prob: 0.5 },
-        { id: 'initial_master', name: '声母猎手', icon: '🎯', desc: '声母选择全部正确', check: function(s) { return s.initialCorrect === s.initialTotal && s.initialTotal > 0; }, prob: 0.5 },
-        { id: 'medial_master', name: '介母猎手', icon: '🔮', desc: '介母选择全部正确', check: function(s) { return s.medialCorrect === s.medialTotal && s.medialTotal > 0; }, prob: 0.5 },
-        { id: 'final_master', name: '韵母行者', icon: '🌊', desc: '韵母选择全部正确', check: function(s) { return s.finalCorrect === s.finalTotal && s.finalTotal > 0; }, prob: 0.5 },
-        { id: 'high_acc', name: '稳如磐石', icon: '🛡️', desc: '正确率≥90%', check: function(s) { return s.accuracy >= 90 && s.accuracy < 100; }, prob: 0.6 },
-        { id: 'comeback', name: '逆风翻盘', icon: '🏆', desc: '前5题错≥2题但最终正确率≥80%', check: function(s) { return s.earlyErrors >= 2 && s.accuracy >= 80; }, prob: 0.4 },
-        { id: 'brave', name: '勇者无惧', icon: '🗡️', desc: '困难模式下正确率≥80%', check: function(s) { return s.difficulty === 'hard' && s.accuracy >= 80; }, prob: 0.5 },
-        { id: 'scholar', name: '博学多才', icon: '📖', desc: '完成一个学期的摸底阶段', check: function(s) { return s.phaseCompleted === 'assessment'; }, prob: 0.7 },
-        { id: 'examiner', name: '金榜题名', icon: '📜', desc: '通过学期考核', check: function(s) { return s.phaseCompleted === 'exam'; }, prob: 0.3 }
-    ];
-
-    // 积累型勋章（检查student累计数据，非单场表现）
-    var CUMULATIVE_BADGE_DEFS = [
-        { id: 'pioneer', name: '初出茅庐', icon: '🌱', desc: '完成1场比赛', check: function(st) { return st.sessions >= 1; }, prob: 1.0 },
-        { id: 'persistent', name: '锲而不舍', icon: '💪', desc: '累计完成10场比赛', check: function(st) { return st.sessions >= 10; }, prob: 1.0 },
-        { id: 'devoted', name: '百炼成钢', icon: '⚒️', desc: '累计完成50场比赛', check: function(st) { return st.sessions >= 50; }, prob: 1.0 },
-        { id: 'legend', name: '千锤百炼', icon: '🏔️', desc: '累计完成100场比赛', check: function(st) { return st.sessions >= 100; }, prob: 1.0 },
-        { id: 'easy_clear', name: '踏歌而行', icon: '🌸', desc: '简单模式通关一个学期', check: function(st) { return (st.easyCompleted || 0) >= 1; }, prob: 1.0 },
-        { id: 'medium_clear', name: '烈火淬金', icon: '🔥', desc: '中等模式通关一个学期', check: function(st) { return (st.mediumCompleted || 0) >= 1; }, prob: 1.0 },
-        { id: 'hard_clear', name: '登峰造极', icon: '👑', desc: '困难模式通关一个学期', check: function(st) { return (st.hardCompleted || 0) >= 1; }, prob: 1.0 },
-        { id: 'points_1k', name: '小有所成', icon: '✨', desc: '累计积分达到1000', check: function(st) { return st.totalPoints >= 1000; }, prob: 1.0 },
-        { id: 'points_5k', name: '学富五车', icon: '📚', desc: '累计积分达到5000', check: function(st) { return st.totalPoints >= 5000; }, prob: 1.0 },
-        { id: 'points_20k', name: '满腹经纶', icon: '🎓', desc: '累计积分达到20000', check: function(st) { return st.totalPoints >= 20000; }, prob: 1.0 },
-        { id: 'points_50k', name: '博古通今', icon: '🌟', desc: '累计积分达到50000', check: function(st) { return st.totalPoints >= 50000; }, prob: 1.0 }
-    ];
+    // ===== 勋章系统 & 评级系统 =====
+    // 已独立为 badge-system.js 和 grade-system.js
+    // 此处通过 BadgeSystem / GradeSystem 全局对象调用
+    var BADGE_DEFS = BadgeSystem.BADGE_DEFS;
+    var CUMULATIVE_BADGE_DEFS = BadgeSystem.CUMULATIVE_BADGE_DEFS;
 
     // ===== 评级系统 =====
-    // 评级由calculateGrade函数根据设置动态生成
-
+    // 已独立为 grade-system.js，此处包装为项目内函数
     function calculateGrade(accuracy, maxStreak, avgTime) {
         var s = App.Storage.getSettings();
-        var sssAcc = s.sssAcc || 97;
-        var sssStreak = s.sssStreak || 15;
-        var maxBonus = s.maxBonus || 40;
-        var step = Math.round(maxBonus / 7 * 10) / 10; // 每级差值
-
-        var GRADES = [
-            { grade: 'SSS', minAcc: sssAcc, minStreak: sssStreak, bonusHigh: maxBonus, bonusLow: maxBonus - step },
-            { grade: 'SS', minAcc: Math.max(80, sssAcc - 7), minStreak: Math.max(5, sssStreak - 5), bonusHigh: maxBonus - step, bonusLow: maxBonus - step * 2 },
-            { grade: 'S', minAcc: Math.max(70, sssAcc - 17), minStreak: Math.max(3, sssStreak - 7), bonusHigh: maxBonus - step * 2, bonusLow: maxBonus - step * 3 },
-            { grade: 'A', minAcc: 70, minStreak: 5, bonusHigh: maxBonus - step * 3, bonusLow: maxBonus - step * 4 },
-            { grade: 'B', minAcc: 60, minStreak: 3, bonusHigh: maxBonus - step * 4, bonusLow: maxBonus - step * 5 },
-            { grade: 'C', minAcc: 40, minStreak: 0, bonusHigh: maxBonus - step * 5, bonusLow: maxBonus - step * 6 },
-            { grade: 'D', minAcc: 0, minStreak: 0, bonusHigh: Math.max(5, maxBonus - step * 6), bonusLow: 0 }
-        ];
-
-        for (var i = 0; i < GRADES.length; i++) {
-            var g = GRADES[i];
-            if (accuracy >= g.minAcc && maxStreak >= g.minStreak) {
-                var bonus = g.bonusLow + Math.random() * (g.bonusHigh - g.bonusLow);
-                bonus = Math.round(bonus * 10) / 10;
-                return { grade: g.grade, bonus: bonus };
-            }
-        }
-        return { grade: 'D', bonus: 0 };
+        return GradeSystem.calculate(accuracy, maxStreak, avgTime, {
+            sssAcc: s.sssAcc || 97,
+            sssStreak: s.sssStreak || 15,
+            maxBonus: s.maxBonus || 40
+        });
     }
 
     // ===== 难度配置 =====
@@ -1188,6 +1139,8 @@
             }
 
             PinyinData.loadSemesters(semestersToLoad, function () {
+                console.log('[Exam] loadSemesters完成, chars[' + curSem.id + ']=' +
+                    (PinyinData.chars[curSem.id] ? PinyinData.chars[curSem.id].length + '字' : '未加载'));
                 self._startAfterLoad(curSem, progress, semIdx);
             });
         },
@@ -1209,7 +1162,11 @@
             }
 
             if (questions.length === 0) {
-                App.Toast.show('该学期暂无字库', 'error');
+                console.error('[Exam] 题库为空！semesterId=' + curSem.id +
+                    ', charsLoaded=' + !!PinyinData.chars[curSem.id] +
+                    ', charsCount=' + (PinyinData.chars[curSem.id] ? PinyinData.chars[curSem.id].length : 'N/A') +
+                    ', phase=' + this.phase);
+                App.Toast.show('该学期暂无字库（' + curSem.name + '），请检查字库文件', 'error');
                 return;
             }
 
@@ -2836,6 +2793,8 @@
             localStorage.setItem(this.STORAGE_KEY_USER, username);
             localStorage.setItem(this.STORAGE_KEY_PASS, password);
             localStorage.setItem(this.STORAGE_KEY_LOGGED_IN, 'true');
+            // 隐藏登录弹窗
+            App.Auth.hideLogin();
             // 初始化主应用并切换到首页
             App._initMainApp();
             // 传递认证信息到文件管理器
@@ -2873,20 +2832,17 @@
             // 停止自动同步
             App.FileSync.stopAutoSave();
             App.Modal.close();
-            App.switchView('login');
+            App.Auth.showLogin();
             App.Toast.show('已退出登录，本地缓存已清空', 'info');
         },
 
-        // 打开账号管理（弹出文件管理器中的denglu.html）
+        // 打开账号管理（弹出登录弹窗，切换到修改密码标签）
         showAccountManager: function () {
-            var modal = document.getElementById('file-modal');
-            if (!modal) return;
-            modal.classList.add('active');
-            // 复用文件管理器弹窗，临时切换iframe src
-            var frame = document.getElementById('fileManagerFrame');
+            var frame = document.getElementById('loginFrame');
             if (frame) {
                 frame.src = 'denglu.html?tab=changepwd';
             }
+            App.Auth.showLogin();
         },
 
         // 将认证信息同步到文件管理器iframe
@@ -2906,13 +2862,30 @@
             }
         },
 
-        // 检查登录状态，未登录则显示登录页
+        // 检查登录状态，未登录则显示登录弹窗
         checkAuth: function () {
             if (!this.isLoggedIn()) {
-                App.switchView('login');
+                App.Auth.showLogin();
                 return false;
             }
             return true;
+        },
+
+        // 显示登录弹窗
+        showLogin: function () {
+            var overlay = document.getElementById('loginOverlay');
+            if (overlay) overlay.classList.add('active');
+        },
+
+        // 隐藏登录弹窗
+        hideLogin: function () {
+            var overlay = document.getElementById('loginOverlay');
+            if (overlay) overlay.classList.remove('active');
+            // 恢复iframe为默认登录页
+            var frame = document.getElementById('loginFrame');
+            if (frame && frame.src.indexOf('tab=changepwd') > -1) {
+                frame.src = 'denglu.html';
+            }
         }
     };
 
@@ -3142,41 +3115,37 @@
         // 登录后检查云端文件，决定是下载还是新建
         checkCloudAndInit: function () {
             var self = this;
-            // 先刷新云端列表
+            // 标记等待云端刷新完成
+            this._waitingCloudRefresh = true;
+            // 先刷新云端列表（文件管理器完成后会发 refreshCloudDone 消息）
             this.postMsg({ type: 'refreshCloud' });
-            // 延迟后检查结果（文件管理器会通过消息返回）
+            // 兜底：5秒后如果还没收到 refreshCloudDone，也执行检查
             setTimeout(function () {
-                self._doCloudCheck();
-            }, 3000);
+                if (self._waitingCloudRefresh) {
+                    self._waitingCloudRefresh = false;
+                    self._doCloudCheck();
+                }
+            }, 5000);
         },
 
         _doCloudCheck: function () {
             var self = this;
             var fileIndex = getFileIndex();
 
-            // 1. 镜像文件：云端有则下载，云端没有则上传本地
-            var mirrorEntry = findIndexByName(MIRROR_FILE_NAME);
-            if (mirrorEntry) {
-                // 文件管理器在 refreshCloud 后已自动处理：
-                // - 云端有镜像文件 → 自动下载（镜像文件自动下载策略）
-                // - 云端没有 → 本地文件保持，等同步时上传
-                // 只需确保镜像文件被标记为监控
-                this.postMsg({
-                    type: 'openFile',
-                    name: MIRROR_FILE_NAME
-                });
-            }
+            // 1. 镜像文件：无论本地有没有，都请求打开
+            // - 本地有 → openFileById 走先一致再打开
+            // - 本地没有 → 文件管理器查云端缓存并自动下载
+            this.postMsg({
+                type: 'openFile',
+                name: MIRROR_FILE_NAME
+            });
 
-            // 2. 当前学期文件：必须确认云端没有才允许本地新建
+            // 2. 当前学期文件：无论本地有没有，都请求打开
+            // - 本地有 → openFileById 走先一致再打开
+            // - 本地没有 → 文件管理器查云端缓存并自动下载，或创建新文件
             var curSem = App.Semester.getCurrentSemester();
             if (curSem) {
                 var fileName = getSemesterFileName(curSem.id);
-                var semEntry = findIndexByName(fileName);
-
-                // 请求文件管理器打开学期文件
-                // 文件管理器的 openFile 会走"先一致再打开"策略：
-                // - 云端有此文件 → 下载云端版本，通过 fileContentUpdated 回传
-                // - 云端没有此文件 → 本地文件作为新版本，允许注册
                 this.postMsg({
                     type: 'openFile',
                     name: fileName
@@ -3204,7 +3173,14 @@
                     break;
 
                 case 'openDenied':
-                    App.Toast.show('无法打开文件：' + (msg.reason || '未知原因'), 'error');
+                    // 本地和云端都没有此文件 → 自动创建
+                    if (msg.reason === 'not_found_anywhere' && msg.name) {
+                        this._createMissingFile(msg.name);
+                    } else if (msg.reason === 'network_error') {
+                        App.Toast.show('网络异常，无法打开文件', 'error');
+                    } else {
+                        App.Toast.show('无法打开文件：' + (msg.reason || '未知原因'), 'error');
+                    }
                     this._syncing = false;
                     break;
 
@@ -3224,6 +3200,14 @@
 
                 case 'fileDeleted':
                     App.Toast.show('文件已被删除：' + (msg.name || ''), 'warning');
+                    break;
+
+                case 'refreshCloudDone':
+                    // 云端刷新完成，执行文件检查
+                    if (this._waitingCloudRefresh) {
+                        this._waitingCloudRefresh = false;
+                        this._doCloudCheck();
+                    }
                     break;
 
                 case 'closeFileManager':
@@ -3278,24 +3262,56 @@
         },
 
         // 将云端下载的内容写入对应文件
+        // 本地和云端都没有文件时，自动创建并发注册
+        _createMissingFile: function (fileName) {
+            var content = '';
+            if (fileName === MIRROR_FILE_NAME) {
+                App.Storage._ensureMirrorFile();
+                var entry = findIndexByName(MIRROR_FILE_NAME);
+                if (entry) {
+                    content = readFileData(entry.id) || '';
+                }
+            } else {
+                // 学期文件
+                var semId = '';
+                for (var i = 0; i < PinyinData.semesters.length; i++) {
+                    if (getSemesterFileName(PinyinData.semesters[i].id) === fileName) {
+                        semId = PinyinData.semesters[i].id;
+                        break;
+                    }
+                }
+                if (semId) {
+                    App.Storage._ensureSemesterFile(semId);
+                    var entry2 = findIndexByName(fileName);
+                    if (entry2) {
+                        content = readFileData(entry2.id) || '';
+                    }
+                }
+            }
+            if (content) {
+                this.postMsg({
+                    type: 'registerNewFile',
+                    name: fileName,
+                    content: content
+                });
+            }
+        },
+
         _importFileContent: function (fileName, content) {
             if (!content) return;
             var entry = findIndexByName(fileName);
             if (!entry) {
                 // 本地没有这个文件，创建它
                 createFile(fileName, content);
-            } else {
-                // 写入已有文件
-                writeFileData(entry.id, content);
             }
-            // 解析内容并刷新UI
+            // 注意：不调用writeFileData/_setMirrorData/_setSemesterData
+            // 因为downloadCloudFileById已经写入了内容，再次写入会导致version+1
+            // 这里只做内存中的数据解析和UI刷新
+
             if (fileName === MIRROR_FILE_NAME) {
-                // 镜像文件：即时写入，刷新所有依赖系统设置的UI
                 try {
                     var data = JSON.parse(content);
                     if (data) {
-                        // 直接写入镜像数据（不触发文件协议的写回，避免循环）
-                        App.Storage._setMirrorData(data);
                         // 刷新字体等设置
                         if (data.feedbackFontSize) document.documentElement.style.setProperty('--feedback-answer-size', data.feedbackFontSize + 'px');
                         if (data.pinyinDisplaySize) document.documentElement.style.setProperty('--pinyin-display-size', data.pinyinDisplaySize + 'px');
@@ -3303,18 +3319,12 @@
                 } catch (e) { /* 忽略解析错误 */ }
                 App.Home.render();
             } else {
-                // 学期文件：仅当是当前学期时才刷新UI
                 var curSem = App.Semester.getCurrentSemester();
                 if (curSem && fileName === getSemesterFileName(curSem.id)) {
-                    try {
-                        var semData = JSON.parse(content);
-                        if (semData) {
-                            App.Storage._setSemesterData(curSem.id, semData);
-                        }
-                    } catch (e) { /* 忽略解析错误 */ }
+                    // 学期数据已在downloadCloudFileById中写入localStorage
+                    // _getSemesterData会从localStorage读取，无需额外操作
                     App.Home.render();
                 }
-                // 非当前学期的文件：仅写入文件数据，不加载到内存
             }
         },
 
@@ -3396,7 +3406,8 @@
 
         // 检查登录状态
         if (!App.Auth.checkAuth()) {
-            // 未登录，显示登录页，不初始化主应用
+            // 未登录，显示登录弹窗，首页作为背景
+            App.switchView('home');
             return;
         }
 

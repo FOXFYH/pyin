@@ -12,18 +12,6 @@
 
     <!-- 主界面 -->
     <div id="app">
-        <!-- 登录界面 -->
-        <section id="view-login" class="view">
-            <div class="login-header">
-                <div class="app-logo">拼</div>
-                <h1 class="app-title">拼音练习</h1>
-                <p class="login-subtitle">请先登录以使用应用</p>
-            </div>
-            <div class="login-frame-wrap">
-                <iframe id="loginFrame" src="denglu.html"></iframe>
-            </div>
-        </section>
-
         <!-- 首页 -->
         <section id="view-home" class="view">
             <div class="home-header">
@@ -408,7 +396,20 @@
         </div>
     </div>
 
+    <!-- 登录浮动弹窗 -->
+    <div id="loginOverlay" class="login-overlay">
+        <div id="loginIframeContainer" class="login-modal">
+            <div id="loginHeader" class="login-modal-header">
+                <span>登录系统</span>
+                <button id="closeLoginBtn" class="login-modal-close" onclick="App.Auth.hideLogin()">✕</button>
+            </div>
+            <iframe id="loginFrame" src="denglu.html"></iframe>
+        </div>
+    </div>
+
     <script src="pinyin-data.js"></script>
+    <script src="badge-system.js"></script>
+    <script src="grade-system.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
