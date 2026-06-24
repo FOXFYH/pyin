@@ -392,7 +392,7 @@
     <!-- 文件管理器弹窗 -->
     <div class="file-modal-overlay" id="file-modal" onclick="if(event.target===this)App.FileSync.closeManager()">
         <div class="file-modal-box">
-            <iframe id="fileManagerFrame" src="文件管理.HTML"></iframe>
+            <iframe id="fileManagerFrame" src="about:blank"></iframe>
         </div>
     </div>
 
@@ -403,7 +403,10 @@
                 <span>登录系统</span>
                 <button id="closeLoginBtn" class="login-modal-close" onclick="App.Auth.hideLogin()">✕</button>
             </div>
-            <iframe id="loginFrame" src="denglu.html"></iframe>
+            <iframe id="loginFrame" src="about:blank"></iframe>
+            <div style="padding:8px 12px;border-top:1px solid #eee;flex-shrink:0">
+                <button onclick="window.location.href='denglu.html?standalone=1'" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;background:#fff;color:#666;font-size:13px;cursor:pointer;touch-action:manipulation;-webkit-appearance:none;appearance:none">输入框无法显示？点此备用登录</button>
+            </div>
         </div>
     </div>
 

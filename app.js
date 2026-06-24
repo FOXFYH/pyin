@@ -2865,6 +2865,10 @@
 
         // 打开账号管理（弹出登录弹窗，切换到修改密码标签）
         showAccountManager: function () {
+            if (this.shouldUseStandaloneLogin()) {
+                window.location.href = 'denglu.html?standalone=1&tab=changepwd';
+                return;
+            }
             var frame = document.getElementById('loginFrame');
             if (frame) {
                 frame.src = 'denglu.html?tab=changepwd';
@@ -2889,6 +2893,32 @@
             }
         },
 
+        // 检测Android版本，返回版本号或-1（非Android/无法确定）
+        getAndroidVersion: function () {
+            var ua = navigator.userAgent;
+            var match = ua.match(/Android\s+(\d+)/);
+            if (match && match[1]) {
+                return parseInt(match[1], 10);
+            }
+            return -1; // 非Android或无法确定
+        },
+
+        // 判断是否应使用独立登录页（非iframe弹窗）
+        // 安卓低于14 → 跳转独立登录页；电脑/非安卓 → iframe弹窗；无法确定 → 跳转独立登录页
+        shouldUseStandaloneLogin: function () {
+            var ver = this.getAndroidVersion();
+            if (ver === -1) {
+                // 非Android设备：电脑端走iframe弹窗
+                if (!/Android/i.test(navigator.userAgent)) {
+                    return false; // 电脑端，允许iframe弹窗
+                }
+                // UA含Android但无法解析版本号，视为低版本
+                return true;
+            }
+            // 低于安卓14，跳转独立登录页
+            return ver < 14;
+        },
+
         // 检查登录状态，未登录则显示登录弹窗
         checkAuth: function () {
             if (!this.isLoggedIn()) {
@@ -2898,10 +2928,19 @@
             return true;
         },
 
-        // 显示登录弹窗
+        // 显示登录弹窗（低版本安卓或无法确定设备时直接跳转独立登录页）
         showLogin: function () {
+            if (this.shouldUseStandaloneLogin()) {
+                window.location.href = 'denglu.html?standalone=1';
+                return;
+            }
             var overlay = document.getElementById('loginOverlay');
             if (overlay) overlay.classList.add('active');
+            // 延迟加载iframe：确保容器已可见后再加载，修复老WebView输入框不渲染问题
+            var frame = document.getElementById('loginFrame');
+            if (frame && (frame.src === 'about:blank' || frame.src === '' || !frame.src)) {
+                frame.src = 'denglu.html';
+            }
         },
 
         // 隐藏登录弹窗
@@ -2978,6 +3017,12 @@
             var modal = document.getElementById('file-modal');
             if (!modal) return;
             modal.classList.add('active');
+
+            // 延迟加载iframe：确保容器已可见后再加载，修复老WebView输入框不渲染问题
+            var frame = document.getElementById('fileManagerFrame');
+            if (frame && (frame.src === 'about:blank' || frame.src === '' || !frame.src)) {
+                frame.src = '文件管理.HTML';
+            }
 
             // 通知文件管理器当前编辑的文件
             var curFileName = this.getCurrentEditFileName();
@@ -3480,6 +3525,15 @@
         App.FX.init();
         App.FileSync.initFrame();
         App.Exam._loadOptionFontSize();
+
+        // 检查独立登录回跳：denglu.html?standalone=1 登录成功后会设此标记
+        if (localStorage.getItem('PINYINLIANXI_standalone_just_logged') === '1') {
+            localStorage.removeItem('PINYINLIANXI_standalone_just_logged');
+            // 直接初始化主应用
+            App._initMainApp();
+            App.Toast.show('欢迎，' + App.Auth.getUsername(), 'success');
+            return;
+        }
 
         // 检查登录状态
         if (!App.Auth.checkAuth()) {

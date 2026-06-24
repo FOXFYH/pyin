@@ -54,6 +54,11 @@
 <body>
   <div id="statusText" class="status status-info">就绪</div>
 
+  <!-- 独立模式下的返回按钮 -->
+  <div id="standaloneBack" style="display:none;margin-bottom:8px">
+    <button onclick="window.location.href='index.html'" style="background:#6c757d;font-size:14px;padding:8px">← 返回主页面</button>
+  </div>
+
   <div class="card">
     <div class="tab-bar">
       <div class="tab" id="tab1" onclick="showPanel(1)">注册</div>
@@ -142,6 +147,18 @@ let correctCode = "";
 // ================= 配置 =================
 const API_URL = "https://1408347752-dxgsap4qrj.ap-guangzhou.tencentscf.com";
 const WEBHOOK_URL = "https://www.kdocs.cn/api/v3/ide/file/504393979179/script/V2-jCry7lblkwsPtTSmtjlWY/sync_task";
+
+// ================= 独立模式（非iframe，跳转页面登录） =================
+const isStandalone = new URLSearchParams(window.location.search).has('standalone');
+
+// 独立模式登录成功后：存到主应用的key，跳回主页面
+function onStandaloneLoginSuccess(username, password) {
+  localStorage.setItem('PINYINLIANXI_auth_user', username);
+  localStorage.setItem('PINYINLIANXI_auth_pass', password);
+  localStorage.setItem('PINYINLIANXI_auth_logged_in', 'true');
+  localStorage.setItem('PINYINLIANXI_standalone_just_logged', '1');
+  window.location.href = 'index.html';
+}
 
 // ================= 标签切换 =================
 function showPanel(num) {
@@ -237,6 +254,7 @@ async function doQuickLogin() {
       alert('登录成功');
       localStorage.setItem('yonghuID',u);
       localStorage.setItem('yonghuPwd',p);
+      if (isStandalone) { onStandaloneLoginSuccess(u, p); return; }
       if (window.parent !== window) {
         window.parent.postMessage({ type:'loginSuccess', username:u, password:p }, '*');
       }
@@ -295,9 +313,10 @@ async function doLogin() {
       setStatus('登录成功');
       alert('登录成功');
       localStorage.setItem('yonghuID',u);
-      // 保存密码到本地（测试阶段）
       localStorage.setItem('yonghuPwd',p);
-      // 发送登录成功通知给父窗口
+      // 独立模式：跳回主页面
+      if (isStandalone) { onStandaloneLoginSuccess(u, p); return; }
+      // iframe模式：通知父窗口
       if (window.parent !== window) {
         window.parent.postMessage({
           type: 'loginSuccess',
@@ -333,6 +352,12 @@ async function doChangePassword() {
     document.getElementById('logResp').innerText = txt;
     const d = JSON.parse(txt).data?.result || JSON.parse(txt);
     if (d.TZbianhao===501) { setStatus('修改成功'); alert('修改成功');
+      // 独立模式：更新密码后跳回主页面
+      if (isStandalone) {
+        localStorage.setItem('PINYINLIANXI_password', newP);
+        window.location.href = 'index.html';
+        return;
+      }
       // 通知父窗口密码已修改
       if (window.parent !== window) {
         window.parent.postMessage({
@@ -349,6 +374,10 @@ async function doChangePassword() {
 // 初始化
 window.onload = () => {
   showPanel(getDefaultPanelFromUrl());
+  // 独立模式显示返回按钮
+  if (isStandalone) {
+    document.getElementById('standaloneBack').style.display = 'block';
+  }
 }
 </script>
 </body>
