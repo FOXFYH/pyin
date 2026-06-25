@@ -421,7 +421,20 @@
         </div>
     </div>
 
+    <!-- 升级考核恭喜页面 -->
+    <div class="celebration-overlay hidden" id="celebration-overlay">
+        <div class="celebration-content">
+            <div class="celebration-trophy">🏆</div>
+            <div class="celebration-title">考核通关</div>
+            <div class="celebration-subtitle" id="celebration-subtitle"></div>
+            <div class="celebration-unlocks" id="celebration-unlocks"></div>
+            <div class="celebration-stats" id="celebration-stats"></div>
+            <button class="celebration-btn" id="celebration-btn" onclick="App.Celebration.hide()">太棒了！</button>
+        </div>
+    </div>
+
     <script src="pinyin-data.js"></script>
+    <script src="polyphones.js"></script>
     <script src="badge-system.js"></script>
     <script src="grade-system.js"></script>
     <script src="app.js"></script>

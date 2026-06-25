@@ -9,6 +9,7 @@ var PinyinData = {
   initials: ['b','c','ch','d','f','g','h','j','k','l','m','n','p','q','r','s','sh','t','w','x','y','z','zh'],
   medials: ['i','u','ü'],
   // 可分解的韵母：含介母的三拼音节
+  // 注：üe/üan 是完整复韵母，不能拆分为介母+韵母
   FINAL_DECOMPOSE: {
     'ia': { medial: 'i', final: 'a' },
     'ian': { medial: 'i', final: 'an' },
@@ -19,12 +20,12 @@ var PinyinData = {
     'uai': { medial: 'u', final: 'ai' },
     'uan': { medial: 'u', final: 'an' },
     'uang': { medial: 'u', final: 'ang' },
-    'uo': { medial: 'u', final: 'o' },
-    'üan': { medial: 'ü', final: 'an' },
-    'üe': { medial: 'ü', final: 'e' }
+    'uo': { medial: 'u', final: 'o' }
+    // 注：üan 在 jqxy 后虽写作 uan，但发音仍是 üan（整体复韵母），不拆分
   },
   // 基础韵母（去除介母后的韵母选项），按 a→e→i→o→u→ü 排列
-  baseFinals: ['a','ai','an','ang','ao','e','ei','en','eng','er','ie','i','in','ing','o','ong','ou','iu','u','un','ui','ü','ün'],
+  // 含 üe/üan 整体复韵母（不拆分）
+  baseFinals: ['a','ai','an','ang','ao','e','ei','en','eng','er','ie','i','in','ing','o','ong','ou','iu','u','un','ui','ü','üe','üan','ün'],
   finals: ['a','ai','an','ang','ao','e','ei','en','eng','er','ie','i','in','ing','o','ong','ou','iu','u','un','ui','ü','ün','üe'],
   wholeSyllables: ['zhi','chi','shi','ri','zi','ci','si','yi','wu','yu','ye','yue','yuan','yin','yun','ying'],
   // 相似整体认读音节分组，用于生成干扰选项
@@ -84,15 +85,15 @@ var PinyinData = {
     // 介母分解：检查韵母是否可分解
     var medial = '';
     var decomp = null;
-    // j/q/x/y 后的 u 实际是 ü，ue=üe, uan=üan（优先检查）
+    // j/q/x/y 后的 u 实际是 ü（拼写规则省略两点）：ue→üe, uan→üan, u→ü
+    // 但 üe 和 üan 是完整复韵母，不拆分为介母+韵母
     if (initial && 'jqxy'.indexOf(initial) >= 0) {
-      if (final_ === 'ue') decomp = this.FINAL_DECOMPOSE['üe'];
-      else if (final_ === 'uan') decomp = this.FINAL_DECOMPOSE['üan'];
+      if (final_ === 'ue') final_ = 'üe';      // 例：学 xué → x + üe（无介母）
+      else if (final_ === 'uan') final_ = 'üan'; // 例：卷 juǎn → j + üan（无介母）
+      else if (final_ === 'u') final_ = 'ü';     // 例：女 nǚ（仅 n/l 后保留两点，jqxy 后写作 u）
     }
-    // 普通分解
-    if (!decomp) {
-      decomp = this.FINAL_DECOMPOSE[final_];
-    }
+    // 普通分解（仅对真正的三拼音节）
+    decomp = this.FINAL_DECOMPOSE[final_];
     if (decomp) {
       medial = decomp.medial;
       final_ = decomp.final;
@@ -146,9 +147,11 @@ var PinyinData = {
   formatPinyin: function(initial, medial, final_, tone) {
     var baseFinal = (medial || '') + final_;
     var result = (initial || '') + this.addTone(baseFinal, tone);
-    // j/q/x/y 后的 ü 写成 u（省略两点规则）
+    // j/q/x/y 后的 ü 写成 u（省略两点规则），含带调形式
     if (initial && 'jqxy'.indexOf(initial) >= 0) {
-      result = result.replace(/ü/g, 'u');
+      result = result.replace(/ü/g, 'u')
+                     .replace(/ǖ/g, 'ū').replace(/ǘ/g, 'ú')
+                     .replace(/ǚ/g, 'ǔ').replace(/ǜ/g, 'ù');
     }
     return result;
   },
@@ -157,14 +160,51 @@ var PinyinData = {
   // 各学期生字数据（初始为空，按需加载）
   chars: {},
 
+  // 多音字备选读音表（char -> [altPinyin, ...]，主拼音已在学期数据中）
+  polyphones: {},
+
   // 已加载的学期记录
   _loaded: {},
 
   // 加载中的回调队列
   _loadingCallbacks: {},
 
+  // 注册多音字备选读音（由 polyphones.js 调用）
+  registerPolyphones: function(map) {
+    var self = this;
+    Object.keys(map).forEach(function (ch) {
+      self.polyphones[ch] = map[ch];
+    });
+  },
+
+  // 取得一个字的完整合法读音数组（主拼音 + 备选）
+  getAllPinyin: function (char) {
+    var self = this;
+    // 从学期数据找主拼音
+    var primary = null;
+    Object.keys(this.chars).forEach(function (sid) {
+      if (primary) return;
+      var arr = self.chars[sid];
+      for (var i = 0; i < arr.length; i++) {
+        if (arr[i].char === char) { primary = arr[i].pinyin; break; }
+      }
+    });
+    var result = primary ? [primary] : [];
+    if (this.polyphones[char]) {
+      result = result.concat(this.polyphones[char]);
+    }
+    return result;
+  },
+
   // 注册学期数据（由各学期数据文件调用）
   registerSemester: function(semesterId, charArray) {
+    // 合并多音字备选读音到每个字符的 altPinyin 字段
+    for (var i = 0; i < charArray.length; i++) {
+      var ch = charArray[i].char;
+      if (this.polyphones[ch]) {
+        charArray[i].altPinyin = this.polyphones[ch].slice();
+      }
+    }
     this.chars[semesterId] = charArray;
     this._loaded[semesterId] = true;
     // 触发等待中的回调

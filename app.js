@@ -1064,6 +1064,88 @@
         }
     };
 
+    // ===== 升级考核恭喜页面 =====
+    App.Celebration = {
+        _confettiTimer: null,
+        _fireworkTimer: null,
+        show: function (opts) {
+            // opts: { semesterName, difficulty, accuracy, score, maxStreak, unlocks: [{icon,label,name}] }
+            var self = this;
+            var overlay = document.getElementById('celebration-overlay');
+            var subtitle = document.getElementById('celebration-subtitle');
+            var unlocksDiv = document.getElementById('celebration-unlocks');
+            var statsDiv = document.getElementById('celebration-stats');
+
+            subtitle.textContent = (opts.semesterName || '') + ' · ' + (opts.difficulty || '') + '难度';
+
+            // 解锁项
+            unlocksDiv.innerHTML = '';
+            (opts.unlocks || []).forEach(function (u) {
+                var item = document.createElement('div');
+                item.className = 'unlock-item';
+                item.innerHTML = '<div class="unlock-icon">' + u.icon + '</div>' +
+                    '<div class="unlock-text"><div class="unlock-label">' + u.label + '</div>' +
+                    '<div class="unlock-name">' + u.name + '</div></div>';
+                unlocksDiv.appendChild(item);
+            });
+
+            // 统计数据
+            statsDiv.innerHTML = '';
+            var stats = [
+                { val: opts.accuracy + '%', label: '正确率' },
+                { val: opts.score, label: '得分' },
+                { val: opts.maxStreak, label: '最高连击' }
+            ];
+            stats.forEach(function (s) {
+                var item = document.createElement('div');
+                item.className = 'stat-item';
+                item.innerHTML = '<div class="stat-val">' + s.val + '</div><div class="stat-label">' + s.label + '</div>';
+                statsDiv.appendChild(item);
+            });
+
+            overlay.classList.remove('hidden');
+
+            // 撒花 + 烟花持续效果
+            App.FX.spawnConfetti(null, null, 60);
+            var burst = 0;
+            this._confettiTimer = setInterval(function () {
+                App.FX.spawnConfetti(
+                    Math.random() * window.innerWidth,
+                    Math.random() * window.innerHeight * 0.5,
+                    20
+                );
+                burst++;
+                if (burst > 8) { clearInterval(self._confettiTimer); self._confettiTimer = null; }
+            }, 400);
+
+            // 烟花式爆发（从底部向上喷射）
+            this._fireworkTimer = setTimeout(function () {
+                var fwColors = ['rgba(251,191,36,1)', 'rgba(244,114,182,1)', 'rgba(6,182,212,1)', 'rgba(34,197,94,1)'];
+                for (var i = 0; i < 40; i++) {
+                    App.FX.confetti.push({
+                        x: window.innerWidth / 2 + (Math.random() - 0.5) * 100,
+                        y: window.innerHeight,
+                        vx: (Math.random() - 0.5) * 14,
+                        vy: -Math.random() * 16 - 10,
+                        w: Math.random() * 6 + 3, h: Math.random() * 6 + 3,
+                        rotation: Math.random() * 360, rotSpeed: (Math.random() - 0.5) * 12,
+                        color: fwColors[Math.floor(Math.random() * fwColors.length)],
+                        life: Math.random() * 50 + 80
+                    });
+                }
+            }, 600);
+
+            // 播放胜利音效
+            App.Sound.playVictory();
+        },
+        hide: function () {
+            var overlay = document.getElementById('celebration-overlay');
+            overlay.classList.add('hidden');
+            if (this._confettiTimer) { clearInterval(this._confettiTimer); this._confettiTimer = null; }
+            if (this._fireworkTimer) { clearTimeout(this._fireworkTimer); this._fireworkTimer = null; }
+        }
+    };
+
     // ===== Toast =====
     App.Toast = {
         show: function (msg, type) {
@@ -2328,6 +2410,12 @@
             var confirmBtn = document.getElementById('feedback-confirm-btn');
             overlay.classList.add('hidden');
             confirmBtn.classList.add('hidden');
+            // 考核阶段：答错即终止（升级考核要求全对，错了已无升级可能）
+            if (this.phase === 'exam' && this.wrongCount > 0) {
+                App.Toast.show('考核阶段答错，本次考核失败', 'warn');
+                this.endSession();
+                return;
+            }
             this.currentIndex++;
             this.totalTime += (this.maxTime - this.timeLeft);
             this.saveProgress();
@@ -2448,6 +2536,12 @@
         continueAfterPause: function () {
             if (this._pauseCountdownTimer) { clearInterval(this._pauseCountdownTimer); this._pauseCountdownTimer = null; }
             App.Modal.close();
+            // 考核阶段：暂停时当前题已超时判错，答错即终止
+            if (this.phase === 'exam' && this.wrongCount > 0) {
+                App.Toast.show('考核阶段答错，本次考核失败', 'warn');
+                this.endSession();
+                return;
+            }
             // 进入下一题（与_dismissFeedback一致）
             this.currentIndex++;
             this.totalTime += (this.maxTime - this.timeLeft);
@@ -2673,11 +2767,14 @@
                     progress.examDone = true;
                     progress.completed = true;
                     progress.phase = 'completed';
+                    // 收集解锁信息，稍后由恭喜页面统一展示
+                    var unlocks = [];
                     // 解锁本学期下一难度
+                    var diffName = { easy: '简单', medium: '中等', hard: '困难' }[this.difficulty];
                     if (this.difficulty === 'easy') {
-                        App.Toast.show('解锁本学期中等难度！', 'success');
+                        unlocks.push({ icon: '⭐', label: '本学期解锁', name: '中等难度' });
                     } else if (this.difficulty === 'medium') {
-                        App.Toast.show('解锁本学期困难难度！', 'success');
+                        unlocks.push({ icon: '⭐', label: '本学期解锁', name: '困难难度' });
                     }
                     // 解锁下一学期（上一学期任意难度完成即解锁）
                     var semIdx = -1;
@@ -2685,8 +2782,12 @@
                         if (PinyinData.semesters[i].id === this.semesterId) { semIdx = i; break; }
                     }
                     if (semIdx >= 0 && semIdx < PinyinData.semesters.length - 1) {
-                        App.Toast.show('解锁下一学期：' + PinyinData.semesters[semIdx + 1].name, 'success');
+                        unlocks.push({ icon: '🎓', label: '新学期解锁', name: PinyinData.semesters[semIdx + 1].name });
                     }
+                    this._pendingCelebration = {
+                        unlocks: unlocks,
+                        diffName: diffName
+                    };
                 }
                 // 考核失败，下次继续考核阶段
             }
@@ -2698,6 +2799,19 @@
             }
 
             App.Semester.setProgress(this.semesterId, this.difficulty, progress);
+
+            // 考核通过后强制验证解锁状态（防止数据未正确保存导致下一学期未解锁）
+            if (this.phase === 'exam' && accuracy === 100) {
+                var verifyProgress = App.Semester.getProgress(this.semesterId, this.difficulty);
+                if (!verifyProgress.completed) {
+                    // 数据未正确保存，强制重写
+                    verifyProgress.completed = true;
+                    verifyProgress.examDone = true;
+                    verifyProgress.phase = 'completed';
+                    App.Semester.setProgress(this.semesterId, this.difficulty, verifyProgress);
+                    console.log('[考核] 检测到 completed 未保存，强制重写学期 ' + this.semesterId + ' 难度 ' + this.difficulty);
+                }
+            }
         },
 
         showResult: function (totalScore, baseScore, timeBonus, gradeBonus, gradeResult, accuracy, earnedBadges, earlyEnd) {
@@ -2740,8 +2854,27 @@
                 }
                 phaseInfo.textContent = '恭喜通过 ' + semName + ' 考核！';
                 phaseInfo.style.color = 'var(--gold)';
-                App.Sound.playVictory();
-                App.FX.spawnConfetti();
+                // 触发炫酷恭喜页面（含解锁信息）
+                if (this._pendingCelebration) {
+                    var celebData = this._pendingCelebration;
+                    this._pendingCelebration = null;
+                    // 延迟显示，让结果页面先渲染
+                    var self = this;
+                    setTimeout(function () {
+                        App.Celebration.show({
+                            semesterName: semName,
+                            difficulty: celebData.diffName,
+                            accuracy: accuracy,
+                            score: totalScore,
+                            maxStreak: self.maxStreak,
+                            unlocks: celebData.unlocks
+                        });
+                    }, 800);
+                } else {
+                    // 再次挑战通关（无新解锁），简单撒花
+                    App.Sound.playVictory();
+                    App.FX.spawnConfetti();
+                }
             } else {
                 phaseInfo.textContent = '当前阶段：' + App.Semester.getPhaseName(progress.phase) + ' | 继续加油！';
                 phaseInfo.style.color = '';

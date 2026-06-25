@@ -941,6 +941,104 @@ input[type="range"]::-webkit-slider-thumb {
     min-height: 0;
 }
 
+/* ===== 升级考核恭喜页面 ===== */
+@keyframes celebBurst { 0%{opacity:0;transform:scale(0.3) rotate(-180deg)} 60%{opacity:1;transform:scale(1.15) rotate(10deg)} 100%{opacity:1;transform:scale(1) rotate(0)} }
+@keyframes celebShine { 0%,100%{filter:drop-shadow(0 0 10px rgba(251,191,36,0.6))} 50%{filter:drop-shadow(0 0 30px rgba(251,191,36,1))} }
+@keyframes celebGlow { 0%,100%{text-shadow:0 0 20px rgba(168,85,247,0.8),0 0 40px rgba(108,92,231,0.5)} 50%{text-shadow:0 0 30px rgba(168,85,247,1),0 0 60px rgba(108,92,231,0.8)} }
+@keyframes celebRise { 0%{opacity:0;transform:translateY(20px)} 100%{opacity:1;transform:translateY(0)} }
+@keyframes celebRing { 0%{transform:scale(0);opacity:0.8} 100%{transform:scale(2.5);opacity:0} }
+@keyframes celebGradient { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+
+.celebration-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 500; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at center, rgba(108,92,231,0.25) 0%, rgba(0,0,0,0.85) 70%);
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.4s ease;
+}
+.celebration-overlay.hidden { display: none; }
+.celebration-content {
+    text-align: center; padding: 30px; max-width: 420px; width: 90%;
+    animation: popIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.celebration-trophy {
+    font-size: 90px; line-height: 1; margin-bottom: 16px;
+    animation: celebBurst 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), celebShine 2s ease-in-out infinite 0.8s;
+    display: inline-block; position: relative;
+}
+.celebration-trophy::before {
+    content: ''; position: absolute; width: 90px; height: 90px;
+    border: 3px solid rgba(251,191,36,0.6); border-radius: 50%;
+    animation: celebRing 1.5s ease-out infinite;
+}
+.celebration-title {
+    font-size: 42px; font-weight: 900; margin-bottom: 12px;
+    background: linear-gradient(90deg, #fbbf24, #a855f7, #06b6d4, #fbbf24);
+    background-size: 300% 100%;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: celebGradient 3s ease infinite, celebGlow 2s ease-in-out infinite;
+    letter-spacing: 4px;
+}
+.celebration-subtitle {
+    font-size: 18px; color: #e0e0e0; margin-bottom: 24px;
+    animation: celebRise 0.6s ease 0.3s both;
+}
+.celebration-unlocks {
+    display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;
+}
+.celebration-unlocks .unlock-item {
+    background: linear-gradient(135deg, rgba(168,85,247,0.2), rgba(108,92,231,0.15));
+    border: 1px solid rgba(168,85,247,0.4);
+    border-radius: var(--radius-md); padding: 14px 18px;
+    display: flex; align-items: center; gap: 12px;
+    animation: celebRise 0.5s ease both;
+}
+.celebration-unlocks .unlock-item:nth-child(1) { animation-delay: 0.5s; }
+.celebration-unlocks .unlock-item:nth-child(2) { animation-delay: 0.7s; }
+.celebration-unlocks .unlock-item:nth-child(3) { animation-delay: 0.9s; }
+.celebration-unlocks .unlock-icon {
+    font-size: 28px; width: 40px; text-align: center;
+}
+.celebration-unlocks .unlock-text {
+    text-align: left; flex: 1;
+}
+.celebration-unlocks .unlock-label {
+    font-size: 12px; color: #a855f7; font-weight: 600; margin-bottom: 2px;
+}
+.celebration-unlocks .unlock-name {
+    font-size: 16px; color: #fff; font-weight: 700;
+}
+.celebration-stats {
+    display: flex; justify-content: center; gap: 20px; margin-bottom: 28px;
+    animation: celebRise 0.5s ease 1.1s both;
+}
+.celebration-stats .stat-item {
+    text-align: center;
+}
+.celebration-stats .stat-val {
+    font-size: 24px; font-weight: 800; color: #fbbf24;
+}
+.celebration-stats .stat-label {
+    font-size: 12px; color: #aaa; margin-top: 2px;
+}
+.celebration-btn {
+    background: linear-gradient(135deg, #6c5ce7, #a855f7);
+    color: white; border: none; padding: 14px 48px;
+    border-radius: var(--radius-md); font-size: 18px; font-weight: 700;
+    font-family: inherit; cursor: pointer;
+    box-shadow: 0 8px 30px rgba(168,85,247,0.5);
+    transition: var(--transition);
+    animation: celebRise 0.5s ease 1.3s both;
+}
+.celebration-btn:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 12px 40px rgba(168,85,247,0.7);
+}
+.celebration-btn:active {
+    transform: translateY(0) scale(0.98);
+}
+
 /* 设置页账号管理按钮样式 */
 .btn-danger-sm {
     background: rgba(239,68,68,0.15);
