@@ -35,6 +35,17 @@
                 <span class="semester-name" id="home-semester-name">一年级上学期</span>
                 <span class="semester-phase" id="home-semester-phase">摸底阶段</span>
             </div>
+            <div class="home-progress-section" id="home-progress-section">
+                <div class="home-progress-bar-wrap">
+                    <div class="home-progress-bar"><div class="home-progress-fill" id="home-progress-fill"></div></div>
+                    <span class="home-progress-text" id="home-progress-text">0/0</span>
+                </div>
+                <button class="btn-exam-entry locked" id="btn-exam-entry" onclick="App.ExamSetup.enterExamChallenge()">
+                    <span class="exam-entry-icon">🏆</span>
+                    <span class="exam-entry-text">升级考核</span>
+                    <span class="exam-entry-hint" id="exam-entry-hint">进度未满</span>
+                </button>
+            </div>
             <button class="btn-start" onclick="App.switchView('exam-setup')">开始练习</button>
             <div class="home-actions home-actions-5">
                 <button class="btn-action" onclick="App.switchView('profile')"><span class="action-icon">👤</span><span>我的</span></button>

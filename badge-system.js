@@ -24,12 +24,12 @@ var BadgeSystem = (function () {
         { id: 'streak5', name: '五连绝世', icon: '🔥', desc: '连续答对5题', check: function (s) { return s.maxStreak >= 5; }, prob: 0.8 },
         { id: 'streak10', name: '十全十美', icon: '🌟', desc: '连续答对10题', check: function (s) { return s.maxStreak >= 10; }, prob: 0.6 },
         { id: 'streak20', name: '不可阻挡', icon: '⚡', desc: '连续答对20题', check: function (s) { return s.maxStreak >= 20; }, prob: 0.4 },
-        { id: 'streak30', name: '神之一手', icon: '👑', desc: '连续答对30题(全场连对)', check: function (s) { return s.maxStreak >= 30; }, prob: 0.3 },
+        { id: 'streak30', name: '神之一手', icon: '👑', desc: '连续答对27题(全场连对)', check: function (s) { return s.maxStreak >= 27; }, prob: 0.3 },
         { id: 'speed', name: '闪电快手', icon: '⚡', desc: '平均每题用时<5秒', check: function (s) { return s.avgTime > 0 && s.avgTime < 5; }, prob: 0.5 },
-        { id: 'corrector', name: '知错就改', icon: '🔄', desc: '答错后连续答对≥5题', check: function (s) { return s.earlyErrors > 0 && s.maxStreak >= 5; }, prob: 0.6 },
-        { id: 'high_acc', name: '稳如磐石', icon: '🛡️', desc: '正确率≥90%', check: function (s) { return s.accuracy >= 90 && s.accuracy < 100; }, prob: 0.6 },
-        { id: 'comeback', name: '逆风翻盘', icon: '🏆', desc: '前5题错≥2题但最终正确率≥80%', check: function (s) { return s.earlyErrors >= 2 && s.accuracy >= 80; }, prob: 0.4 },
-        { id: 'brave', name: '勇者无惧', icon: '🗡️', desc: '困难模式下正确率≥80%', check: function (s) { return s.difficulty === 'hard' && s.accuracy >= 80; }, prob: 0.5 }
+        { id: 'corrector', name: '知错就改', icon: '🔄', desc: '答错后连续答对≥15题', check: function (s) { return s.earlyErrors > 0 && s.maxStreak >= 15; }, prob: 0.6 },
+        { id: 'high_acc', name: '稳如磐石', icon: '🛡️', desc: '正确率≥97%', check: function (s) { return s.accuracy >= 97 && s.accuracy < 100; }, prob: 0.6 },
+        { id: 'comeback', name: '逆风翻盘', icon: '🏆', desc: '前5题错≥2题但最终正确率≥90%', check: function (s) { return s.earlyErrors >= 2 && s.accuracy >= 90; }, prob: 0.4 },
+        { id: 'brave', name: '勇者无惧', icon: '🗡️', desc: '困难模式下正确率≥95%', check: function (s) { return s.difficulty === 'hard' && s.accuracy >= 95; }, prob: 0.5 }
     ];
 
     // ===== 积累型勋章定义 =====

@@ -139,6 +139,7 @@
     var STORAGE_PREFIX = 'PINYINLIANXI_';
     var FILE_INDEX_KEY = STORAGE_PREFIX + 'file_index';
     var MIRROR_FILE_NAME = '★系统设置'; // 镜像文件名，以★开头自动识别
+    var MIRROR_FILE_ID_KEY = STORAGE_PREFIX + 'mirror_file_id'; // 本地永久绑定的镜像文件ID
 
     // 生成10位随机文件ID
     function generateFileId() {
@@ -269,7 +270,8 @@
             if (entry) {
                 writeFileData(entry.id, JSON.stringify(data));
             } else {
-                createFile(MIRROR_FILE_NAME, JSON.stringify(data));
+                var newId = createFile(MIRROR_FILE_NAME, JSON.stringify(data));
+                this._bindMirrorFileId(newId);
             }
         },
         // 获取某学期文件的全部数据
@@ -288,7 +290,8 @@
             if (entry) {
                 writeFileData(entry.id, JSON.stringify(data));
             } else {
-                createFile(fileName, JSON.stringify(data));
+                var newId = createFile(fileName, JSON.stringify(data));
+                this.setSemesterFileId(semesterId, newId);
             }
         },
         // 确保镜像文件存在
@@ -307,34 +310,106 @@
                     history: [],
                     optionFontSize: 20,
                     examProgress: null,
-                    unlockedDifficulties: ['easy']
+                    unlockedDifficulties: ['easy'],
+                    semesterFileIds: {} // 12个学期文件ID绑定：{ '1a': '8090761640', '1b': '', ... }
                 };
-                createFile(MIRROR_FILE_NAME, JSON.stringify(data));
+                var newId = createFile(MIRROR_FILE_NAME, JSON.stringify(data));
+                // 创建后立即绑定镜像文件ID到本地永久存储
+                this._bindMirrorFileId(newId);
+            } else {
+                // 已存在 → 绑定ID到本地永久存储
+                this._bindMirrorFileId(entry.id);
+                // 兼容旧数据：补充 semesterFileIds 字段
+                var mirror = this._getMirrorData();
+                if (mirror && !mirror.semesterFileIds) {
+                    mirror.semesterFileIds = {};
+                    this._setMirrorData(mirror);
+                }
             }
         },
         // 确保某学期文件存在
         _ensureSemesterFile: function (semesterId) {
             var fileName = getSemesterFileName(semesterId);
-            var entry = findIndexByName(fileName);
-            if (!entry) {
-                // 按需创建：只有当前学期或已有数据时才创建文件
-                var curSem = App.Semester.getCurrentSemester();
-                if (curSem && curSem.id === semesterId) {
-                    var data = {
-                        semesterProgress: { phase: 'assessment', completed: false, assessmentDone: false, completionDone: false, examDone: false, sessions: 0, halfScore: false },
-                        charData: {}
-                    };
-                    createFile(fileName, JSON.stringify(data));
-                }
-                // 非当前学期不自动创建文件，等用户切换到该学期时再创建
+
+            // 1. 先检查★系统设置里是否已绑定该学期的文件ID
+            var boundId = this.getSemesterFileId(semesterId);
+            if (boundId) {
+                // 已绑定ID → 认死理，只认这个ID
+                var entryById = findIndexById(boundId);
+                if (entryById) return; // 本地有绑定的文件 → 不新建
+                // 本地没有绑定的文件 → 不新建，等同步下载
+                console.log('[学期文件] ' + semesterId + ' 已绑定ID=' + boundId + '，本地缺失，等待同步');
+                return;
             }
+
+            // 2. 未绑定ID → 检查本地是否已有同名文件
+            var entry = findIndexByName(fileName);
+            if (entry) {
+                // 本地已有同名文件 → 把它的ID绑定到★系统设置
+                this.setSemesterFileId(semesterId, entry.id);
+                console.log('[学期文件] ' + semesterId + ' 绑定已有文件ID=' + entry.id);
+                return;
+            }
+
+            // 3. 本地没有，且未绑定 → 按需创建（只有当前学期才创建）
+            var curSem = App.Semester.getCurrentSemester();
+            if (curSem && curSem.id === semesterId) {
+                var data = {
+                    semesterProgress: { phase: 'assessment', completed: false, assessmentDone: false, completionDone: false, examDone: false, sessions: 0, halfScore: false },
+                    charData: {}
+                };
+                var newId = createFile(fileName, JSON.stringify(data));
+                // 创建后立即绑定ID到★系统设置
+                this.setSemesterFileId(semesterId, newId);
+                console.log('[学期文件] ' + semesterId + ' 新建并绑定ID=' + newId);
+            }
+            // 非当前学期不自动创建文件，等用户切换到该学期时再创建
         },
         // 检查云端是否已有某文件（由FileSync调用）
+        // 返回值：true=已确认云端有，false=已确认云端无，null=未确认（联网失败或未查询）
         _cloudHasFile: function (fileName) {
-            // 此方法由FileSync在刷新云端后更新缓存
-            return this._cloudFileCache && this._cloudFileCache[fileName] || false;
+            if (!this._cloudFileConfirmed || !this._cloudFileConfirmed[fileName]) {
+                return null; // 未确认，不能判定
+            }
+            return this._cloudFileCache && !!this._cloudFileCache[fileName] || false;
         },
         _cloudFileCache: {},
+        _cloudFileConfirmed: {}, // fileName → true(已确认云端有无)
+
+        // --- 镜像文件ID绑定（本地永久存储，认死理） ---
+        // 绑定镜像文件ID到本地永久存储
+        _bindMirrorFileId: function (id) {
+            if (id) localStorage.setItem(MIRROR_FILE_ID_KEY, id);
+        },
+        // 获取本地永久绑定的镜像文件ID
+        getBoundMirrorFileId: function () {
+            return localStorage.getItem(MIRROR_FILE_ID_KEY) || '';
+        },
+
+        // --- 学期文件ID绑定（存于镜像文件semesterFileIds） ---
+        // 获取学期绑定的文件ID
+        getSemesterFileId: function (semesterId) {
+            var mirror = this._getMirrorData();
+            if (!mirror || !mirror.semesterFileIds) return '';
+            return mirror.semesterFileIds[semesterId] || '';
+        },
+        // 设置学期绑定的文件ID（写入★系统设置）
+        setSemesterFileId: function (semesterId, id) {
+            var mirror = this._getMirrorData() || {};
+            if (!mirror.semesterFileIds) mirror.semesterFileIds = {};
+            // 已绑定且ID不同 → 拒绝覆盖（认死理）
+            if (mirror.semesterFileIds[semesterId] && mirror.semesterFileIds[semesterId] !== id) {
+                console.warn('[学期ID绑定] ' + semesterId + ' 已绑定ID=' + mirror.semesterFileIds[semesterId] + '，拒绝覆盖为' + id);
+                return false;
+            }
+            mirror.semesterFileIds[semesterId] = id;
+            this._setMirrorData(mirror);
+            return true;
+        },
+        // 检查学期是否已注册（已绑定ID）
+        isSemesterRegistered: function (semesterId) {
+            return !!this.getSemesterFileId(semesterId);
+        },
 
         // --- 兼容旧API ---
         get: function (k, d) {
@@ -580,12 +655,16 @@
                         semesterProgress: semProgress || { phase: 'assessment', completed: false, assessmentDone: false, completionDone: false, examDone: false, sessions: 0, halfScore: false },
                         charData: semCharData
                     };
-                    createFile(getSemesterFileName(sid), JSON.stringify(semData));
+                    var migratedSemId = createFile(getSemesterFileName(sid), JSON.stringify(semData));
+                    // 迁移时也绑定ID
+                    this.setSemesterFileId(sid, migratedSemId);
                 }
             }
 
             // 创建镜像文件
-            createFile(MIRROR_FILE_NAME, JSON.stringify(mirrorData));
+            var migratedMirrorId = createFile(MIRROR_FILE_NAME, JSON.stringify(mirrorData));
+            // 迁移时也绑定镜像文件ID
+            this._bindMirrorFileId(migratedMirrorId);
         }
     };
 
@@ -604,7 +683,24 @@
                     else if (charInfo.errorLevel === 2) baseProb = 30; // +200%
                     else if (charInfo.errorLevel === 3) baseProb = 50; // +400%
                 }
-                data[key] = { prob: baseProb, tested: false, correctOnce: false, wrongCount: 0, baseProb: baseProb };
+                data[key] = { prob: baseProb, wrongCount: 0, baseProb: baseProb,
+                    diffProgress: {
+                        easy: { tested: false, correctOnce: false },
+                        medium: { tested: false, correctOnce: false },
+                        hard: { tested: false, correctOnce: false }
+                    }
+                };
+                App.Storage.setSemesterCharData(semesterId, data);
+            }
+            // 兼容旧数据：迁移 tested/correctOnce 到 diffProgress.easy
+            if (!data[key].diffProgress) {
+                data[key].diffProgress = {
+                    easy: { tested: data[key].tested || false, correctOnce: data[key].correctOnce || false },
+                    medium: { tested: false, correctOnce: false },
+                    hard: { tested: false, correctOnce: false }
+                };
+                delete data[key].tested;
+                delete data[key].correctOnce;
                 App.Storage.setSemesterCharData(semesterId, data);
             }
             return data[key];
@@ -633,22 +729,23 @@
             this.set(semesterId, charStr, pd);
         },
         // 答对：概率减少30%，最低不低于baseProb
-        onCorrect: function (semesterId, charStr) {
+        onCorrect: function (semesterId, charStr, difficulty) {
             var pd = this.get(semesterId, charStr);
             pd.prob = Math.max(pd.baseProb || 10, Math.round(pd.prob * 0.7));
-            pd.correctOnce = true;
+            pd.diffProgress[difficulty].correctOnce = true;
             this.set(semesterId, charStr, pd);
         },
         // 标记已测试
-        markTested: function (semesterId, charStr) {
+        markTested: function (semesterId, charStr, difficulty) {
             var pd = this.get(semesterId, charStr);
-            pd.tested = true;
+            pd.diffProgress[difficulty].tested = true;
             this.set(semesterId, charStr, pd);
         },
-        // 获取某学期所有字的概率列表
-        getSemesterChars: function (semesterId) {
+        // 获取某学期所有字的概率列表（按难度返回tested/correctOnce）
+        getSemesterChars: function (semesterId, difficulty) {
             var chars = PinyinData.chars[semesterId];
             if (!chars) return [];
+            var diff = difficulty || 'easy';
             var result = [];
             for (var i = 0; i < chars.length; i++) {
                 var pd = this.get(semesterId, chars[i].char);
@@ -657,8 +754,8 @@
                     pinyin: chars[i].pinyin,
                     errorLevel: chars[i].errorLevel,
                     prob: pd.prob,
-                    tested: pd.tested,
-                    correctOnce: pd.correctOnce,
+                    tested: pd.diffProgress[diff].tested,
+                    correctOnce: pd.diffProgress[diff].correctOnce,
                     wrongCount: pd.wrongCount,
                     baseProb: pd.baseProb,
                     semesterId: semesterId
@@ -670,23 +767,43 @@
 
     // ===== 学期进度管理 =====
     App.Semester = {
-        getProgress: function (semesterId) {
-            var p = App.Storage.getSemesterProgress(semesterId);
-            if (!p || Object.keys(p).length === 0) {
-                p = { phase: 'assessment', completed: false, assessmentDone: false, completionDone: false, examDone: false, sessions: 0, halfScore: false };
-                // 不自动创建文件，只在内存中返回默认值
+        // 获取某学期某难度的进度
+        getProgress: function (semesterId, difficulty) {
+            var allProgress = App.Storage.getSemesterProgress(semesterId);
+            var diff = difficulty || 'easy';
+            // 兼容旧数据：如果 allProgress 有 phase 字段（旧格式），迁移到 easy
+            if (allProgress && allProgress.phase && !allProgress.easy) {
+                allProgress = { easy: allProgress };
+            }
+            var p = allProgress ? allProgress[diff] : null;
+            if (!p) {
+                p = { phase: 'assessment', completed: false, assessmentDone: false, completionDone: false, examDone: false, sessions: 0, halfScore: false, lastWrongChars: [] };
             }
             return p;
         },
-        setProgress: function (semesterId, progress) {
-            App.Storage.setSemesterProgressSingle(semesterId, progress);
+        setProgress: function (semesterId, difficulty, progress) {
+            var allProgress = App.Storage.getSemesterProgress(semesterId) || {};
+            // 兼容旧数据
+            if (allProgress.phase && !allProgress.easy) {
+                allProgress = { easy: allProgress };
+            }
+            allProgress[difficulty] = progress;
+            App.Storage.setSemesterProgressSingle(semesterId, allProgress);
         },
-        // 获取当前应该挑战的学期
+        // 获取当前应该挑战的学期（第一个有未完成难度的学期）
         getCurrentSemester: function () {
             var semesters = PinyinData.semesters;
+            var diffs = ['easy', 'medium', 'hard'];
             for (var i = 0; i < semesters.length; i++) {
-                var p = this.getProgress(semesters[i].id);
-                if (!p.completed) return semesters[i];
+                var allProgress = App.Storage.getSemesterProgress(semesters[i].id);
+                // 兼容旧数据
+                if (allProgress && allProgress.phase && !allProgress.easy) {
+                    allProgress = { easy: allProgress };
+                }
+                var hasIncomplete = diffs.some(function (d) {
+                    return !allProgress || !allProgress[d] || !allProgress[d].completed;
+                });
+                if (hasIncomplete) return semesters[i];
             }
             // 全部完成，返回最后一个
             return semesters[semesters.length - 1];
@@ -696,7 +813,7 @@
             var map = { assessment: '摸底阶段', completion: '补全阶段', exam: '考核阶段', completed: '已完成' };
             return map[phase] || phase;
         },
-        // 判断学期是否解锁
+        // 判断学期是否解锁（上一学期任意难度考核通过即解锁）
         isUnlocked: function (semesterId) {
             var idx = -1;
             for (var i = 0; i < PinyinData.semesters.length; i++) {
@@ -704,8 +821,31 @@
             }
             if (idx === 0) return true;
             var prevId = PinyinData.semesters[idx - 1].id;
-            var prevProgress = this.getProgress(prevId);
-            return prevProgress.completed;
+            // 上一学期任意难度完成即解锁
+            var diffs = ['easy', 'medium', 'hard'];
+            for (var d = 0; d < diffs.length; d++) {
+                var p = this.getProgress(prevId, diffs[d]);
+                if (p.completed) return true;
+            }
+            return false;
+        },
+        // 判断某学期某难度是否解锁
+        isDifficultyUnlocked: function (semesterId, difficulty) {
+            if (difficulty === 'easy') return true;
+            var prevDiff = difficulty === 'medium' ? 'easy' : 'medium';
+            var p = this.getProgress(semesterId, prevDiff);
+            return p.completed === true;
+        },
+        // 获取某学期当前应挑战的难度（第一个未完成的已解锁难度）
+        getCurrentDifficulty: function (semesterId) {
+            var diffs = ['easy', 'medium', 'hard'];
+            for (var i = 0; i < diffs.length; i++) {
+                if (this.isDifficultyUnlocked(semesterId, diffs[i])) {
+                    var p = this.getProgress(semesterId, diffs[i]);
+                    if (!p.completed) return diffs[i];
+                }
+            }
+            return 'easy';
         }
     };
 
@@ -722,8 +862,8 @@
             return (s.reviewRatio || 30) / 100;
         },
         // 摸底阶段出题
-        pickAssessment: function (semesterId, prevWrongChars) {
-            var allChars = App.CharProb.getSemesterChars(semesterId);
+        pickAssessment: function (semesterId, prevWrongChars, difficulty) {
+            var allChars = App.CharProb.getSemesterChars(semesterId, difficulty);
             var cps = this.getCharsPerSession();
             var result = [];
 
@@ -755,8 +895,8 @@
         },
 
         // 补全阶段出题
-        pickCompletion: function (semesterId) {
-            var allChars = App.CharProb.getSemesterChars(semesterId);
+        pickCompletion: function (semesterId, difficulty) {
+            var allChars = App.CharProb.getSemesterChars(semesterId, difficulty);
             var cps = this.getCharsPerSession();
             var result = [];
 
@@ -780,8 +920,8 @@
         },
 
         // 考核阶段出题
-        pickExam: function (semesterId) {
-            var allChars = App.CharProb.getSemesterChars(semesterId);
+        pickExam: function (semesterId, difficulty) {
+            var allChars = App.CharProb.getSemesterChars(semesterId, difficulty);
             return weightedPick(allChars, this.getCharsPerSession());
         },
 
@@ -986,9 +1126,14 @@
 
             // 当前学期
             var curSem = App.Semester.getCurrentSemester();
-            var progress = App.Semester.getProgress(curSem.id);
+            var curDiff = App.Semester.getCurrentDifficulty(curSem.id);
+            var progress = App.Semester.getProgress(curSem.id, curDiff);
             document.getElementById('home-semester-name').textContent = curSem.name;
-            document.getElementById('home-semester-phase').textContent = App.Semester.getPhaseName(progress.phase);
+            var diffName = { easy: '简单', medium: '中等', hard: '困难' }[curDiff];
+            document.getElementById('home-semester-phase').textContent = App.Semester.getPhaseName(progress.phase) + ' · ' + diffName;
+
+            // 渲染进度条和升级考核入口
+            this.renderProgressBar(curSem.id, progress, curDiff);
 
             // 同步状态
             var syncEl = document.getElementById('home-sync-status');
@@ -997,6 +1142,67 @@
                 syncEl.className = 'sync-status' + (App.FileSync._syncing ? ' syncing' : '');
                 syncEl.title = App.FileSync._syncing ? '正在同步...' : '点击查看同步';
                 syncEl.onclick = function () { App.FileSync.openManager(); };
+            }
+        },
+
+        // 渲染进度条和升级考核入口
+        renderProgressBar: function (semesterId, progress, difficulty) {
+            var fillEl = document.getElementById('home-progress-fill');
+            var textEl = document.getElementById('home-progress-text');
+            var btnEl = document.getElementById('btn-exam-entry');
+            var hintEl = document.getElementById('exam-entry-hint');
+            var sectionEl = document.getElementById('home-progress-section');
+            if (!fillEl) return;
+
+            var allChars = App.CharProb.getSemesterChars(semesterId, difficulty);
+            var total = allChars.length;
+            var tested = 0;
+            var correct = 0;
+            allChars.forEach(function (c) {
+                if (c.tested) tested++;
+                if (c.correctOnce) correct++;
+            });
+
+            var percent = 0;
+            var currentCount = 0;
+            var phaseLabel = '';
+
+            if (progress.phase === 'assessment') {
+                // 摸底阶段：已考字数/总字数
+                currentCount = tested;
+                percent = total > 0 ? Math.round(tested / total * 100) : 0;
+                phaseLabel = '摸底';
+            } else if (progress.phase === 'completion') {
+                // 补全阶段：已答对字数/总字数
+                currentCount = correct;
+                percent = total > 0 ? Math.round(correct / total * 100) : 0;
+                phaseLabel = '补全';
+            } else if (progress.phase === 'exam') {
+                // 考核阶段：100%
+                percent = 100;
+                currentCount = total;
+                phaseLabel = '考核';
+            } else if (progress.phase === 'completed') {
+                percent = 100;
+                currentCount = total;
+                phaseLabel = '已完成';
+            }
+
+            fillEl.style.width = percent + '%';
+            fillEl.classList.toggle('complete', percent >= 100);
+            textEl.textContent = phaseLabel + ' ' + currentCount + '/' + total + ' (' + percent + '%)';
+
+            // 升级考核入口：只有进入exam阶段才点亮
+            var canChallenge = (progress.phase === 'exam');
+            if (canChallenge) {
+                btnEl.classList.remove('locked');
+                btnEl.classList.add('unlocked');
+                hintEl.textContent = '点击挑战';
+                hintEl.style.color = '';
+            } else {
+                btnEl.classList.remove('unlocked');
+                btnEl.classList.add('locked');
+                hintEl.textContent = progress.phase === 'completed' ? '已通过' : '进度未满';
             }
         }
     };
@@ -1007,24 +1213,29 @@
 
         render: function () {
             var curSem = App.Semester.getCurrentSemester();
-            var progress = App.Semester.getProgress(curSem.id);
-            document.getElementById('setup-phase-name').textContent = App.Semester.getPhaseName(progress.phase);
+            var curDiff = App.Semester.getCurrentDifficulty(curSem.id);
+            var progress = App.Semester.getProgress(curSem.id, curDiff);
+            var diffName = { easy: '简单', medium: '中等', hard: '困难' }[curDiff];
+            document.getElementById('setup-phase-name').textContent = App.Semester.getPhaseName(progress.phase) + ' · ' + diffName;
             document.getElementById('setup-semester-name').textContent = curSem.name;
 
-            // 高亮选中的难度 + 锁定状态
+            // 高亮选中的难度 + 锁定状态（按学期解锁）
             var cards = document.querySelectorAll('.diff-card');
-            var unlocked = App.Storage.getUnlockedDifficulties();
             cards.forEach(function (c) {
                 var diff = c.getAttribute('data-diff');
-                c.classList.toggle('selected', diff === App.ExamSetup.selectedDifficulty);
-                c.classList.toggle('locked', unlocked.indexOf(diff) === -1);
+                var unlocked = App.Semester.isDifficultyUnlocked(curSem.id, diff);
+                var diffProgress = App.Semester.getProgress(curSem.id, diff);
+                c.classList.toggle('selected', diff === curDiff);
+                c.classList.toggle('locked', !unlocked);
+                c.classList.toggle('completed', diffProgress.completed);
             });
         },
 
         selectDifficulty: function (diff) {
-            // 检查难度是否已解锁
-            if (!App.Storage.isDifficultyUnlocked(diff)) {
-                var hint = diff === 'medium' ? '简单模式完成一个学期后解锁' : '中等模式完成一个学期后解锁';
+            var curSem = App.Semester.getCurrentSemester();
+            // 检查难度是否已解锁（按学期）
+            if (!App.Semester.isDifficultyUnlocked(curSem.id, diff)) {
+                var hint = diff === 'medium' ? '需先通过本学期简单难度考核' : '需先通过本学期中等难度考核';
                 App.Toast.show('该难度未解锁：' + hint, 'warn');
                 return;
             }
@@ -1033,6 +1244,20 @@
             this.render();
             // 直接开始考试
             App.Exam.start(diff);
+        },
+
+        // 升级考核入口
+        enterExamChallenge: function () {
+            var curSem = App.Semester.getCurrentSemester();
+            var curDiff = App.Semester.getCurrentDifficulty(curSem.id);
+            var progress = App.Semester.getProgress(curSem.id, curDiff);
+            if (progress.phase !== 'exam') {
+                App.Toast.show('需完成摸底和补全阶段后才能参加升级考核', 'warn');
+                return;
+            }
+            // 进入难度选择
+            App.switchView('exam-setup');
+            App.Toast.show('请选择难度参加升级考核', 'info');
         }
     };
 
@@ -1121,7 +1346,7 @@
 
             var curSem = App.Semester.getCurrentSemester();
             this.semesterId = curSem.id;
-            var progress = App.Semester.getProgress(curSem.id);
+            var progress = App.Semester.getProgress(curSem.id, diff);
             this.phase = progress.phase;
 
             // 按需加载学期数据，加载完成后开始考试
@@ -1149,11 +1374,11 @@
             // 根据阶段出题
             var questions;
             if (this.phase === 'assessment') {
-                questions = App.QuestionPicker.pickAssessment(curSem.id, progress.lastWrongChars || []);
+                questions = App.QuestionPicker.pickAssessment(curSem.id, progress.lastWrongChars || [], this.difficulty);
             } else if (this.phase === 'completion') {
-                questions = App.QuestionPicker.pickCompletion(curSem.id);
+                questions = App.QuestionPicker.pickCompletion(curSem.id, this.difficulty);
             } else {
-                questions = App.QuestionPicker.pickExam(curSem.id);
+                questions = App.QuestionPicker.pickExam(curSem.id, this.difficulty);
             }
 
             // 非第一学期，混入30%复习字
@@ -1259,8 +1484,8 @@
             this.currentStep = 'initial';
             this.showStep('initial');
 
-            // 标记已测试
-            App.CharProb.markTested(q.semesterId || this.semesterId, q.char);
+            // 标记已测试（按当前难度）
+            App.CharProb.markTested(q.semesterId || this.semesterId, q.char, this.difficulty);
         },
 
         buildOptions: function (correctParsed) {
@@ -1909,7 +2134,7 @@
                 var totalPts = baseScore + timeBonus;
                 this.score += totalPts;
 
-                App.CharProb.onCorrect(q.semesterId || this.semesterId, q.char);
+                App.CharProb.onCorrect(q.semesterId || this.semesterId, q.char, this.difficulty);
                 App.Sound.playCorrect();
                 App.FX.showScorePopup(totalPts, true);
                 App.FX.spawnConfetti(null, null, 25);
@@ -2183,7 +2408,66 @@
             } catch (e) { /* 高亮失败不影响流程 */ }
 
             App.Sound.playWrong();
-            this.showFeedback(false, parsed, this._validParses);
+            // 超时后不进入正常反馈流程，而是弹出暂停对话框
+            this.saveProgress();
+            this.showPauseDialog();
+        },
+
+        // 超时暂停对话框（继续/退出 + 10秒倒计时自动保存退出）
+        _pauseCountdownTimer: null,
+        _pauseCountdownLeft: 10,
+        showPauseDialog: function () {
+            // 清理可能存在的旧倒计时
+            if (this._pauseCountdownTimer) { clearInterval(this._pauseCountdownTimer); this._pauseCountdownTimer = null; }
+            this._pauseCountdownLeft = 10;
+            var self = this;
+
+            var bodyHTML = '<p style="text-align:center;font-size:18px;margin-bottom:12px;">检测到超时，已自动暂停</p>' +
+                '<p style="text-align:center;color:var(--warning);font-size:15px;margin-bottom:8px;">' +
+                '当前题目已判错，进度已保存</p>' +
+                '<p style="text-align:center;color:var(--danger);font-size:20px;font-weight:bold;" id="pause-countdown-text">' +
+                '10秒内无操作将自动同步保存并退出</p>';
+
+            var footerHTML = '<button class="btn-modal-cancel" onclick="App.Exam.continueAfterPause()">继续答题</button>' +
+                '<button class="btn-danger-sm" onclick="App.Exam.exitAfterPause()">退出并保存</button>';
+
+            App.Modal.open('已暂停', bodyHTML, footerHTML);
+
+            // 10秒倒计时，到0自动执行同步保存退出
+            this._pauseCountdownTimer = setInterval(function () {
+                self._pauseCountdownLeft--;
+                var el = document.getElementById('pause-countdown-text');
+                if (el) el.textContent = self._pauseCountdownLeft + '秒内无操作将自动同步保存并退出';
+                if (self._pauseCountdownLeft <= 0) {
+                    self.exitAfterPause();
+                }
+            }, 1000);
+        },
+
+        // 暂停后继续答题
+        continueAfterPause: function () {
+            if (this._pauseCountdownTimer) { clearInterval(this._pauseCountdownTimer); this._pauseCountdownTimer = null; }
+            App.Modal.close();
+            // 进入下一题（与_dismissFeedback一致）
+            this.currentIndex++;
+            this.totalTime += (this.maxTime - this.timeLeft);
+            this.saveProgress();
+            this.showQuestion();
+        },
+
+        // 暂停后退出并同步保存
+        exitAfterPause: function () {
+            if (this._pauseCountdownTimer) { clearInterval(this._pauseCountdownTimer); this._pauseCountdownTimer = null; }
+            App.Modal.close();
+            // 当前题已判错，索引前进到下一题再保存，以便下次恢复从下一题开始
+            this.currentIndex++;
+            this.totalTime += (this.maxTime - this.timeLeft);
+            this.saveProgress();
+            // 触发一次同步上传到云端
+            try { App.FileSync.syncAll(); } catch (e) { /* 同步失败不影响退出 */ }
+            App.Toast.show('进度已保存，下次可继续', 'success');
+            // 返回首页（不清除savedProgress，以便下次恢复）
+            App.switchView('home');
         },
 
         // 提前结束考试
@@ -2273,7 +2557,7 @@
             var totalScore = this.score + gradeBonus;
 
             // 半分检查
-            var progress = App.Semester.getProgress(this.semesterId);
+            var progress = App.Semester.getProgress(this.semesterId, this.difficulty);
             if (progress.halfScore) {
                 totalScore = Math.round(totalScore / 2);
             }
@@ -2289,8 +2573,8 @@
             // 检查勋章
             var phaseCompleted = '';
             if (this.phase === 'assessment') {
-                var allChars = App.CharProb.getSemesterChars(this.semesterId);
-                var allTested = allChars.every(function (c) { return c.tested; });
+                var allChars = App.CharProb.getSemesterChars(this.semesterId, this.difficulty);
+                var allTested = allChars.length > 0 && allChars.every(function (c) { return c.tested; });
                 if (allTested) phaseCompleted = 'assessment';
             } else if (this.phase === 'exam' && accuracy === 100) {
                 phaseCompleted = 'exam';
@@ -2361,12 +2645,13 @@
         },
 
         updateSemesterProgress: function (accuracy) {
-            var progress = App.Semester.getProgress(this.semesterId);
+            var progress = App.Semester.getProgress(this.semesterId, this.difficulty);
 
             if (this.phase === 'assessment') {
-                // 检查是否所有字都被测试过
-                var allChars = App.CharProb.getSemesterChars(this.semesterId);
-                var allTested = allChars.every(function (c) { return c.tested; });
+                // 检查是否所有字都被测试过（按当前难度）
+                var allChars = App.CharProb.getSemesterChars(this.semesterId, this.difficulty);
+                // 防止空数组误判：数据未加载时不能判定为已完成
+                var allTested = allChars.length > 0 && allChars.every(function (c) { return c.tested; });
                 if (allTested) {
                     progress.assessmentDone = true;
                     progress.phase = 'completion';
@@ -2375,9 +2660,9 @@
                     progress.lastWrongChars = this.wrongChars.slice();
                 }
             } else if (this.phase === 'completion') {
-                // 检查是否所有字都答对过一次
-                var allChars = App.CharProb.getSemesterChars(this.semesterId);
-                var allCorrect = allChars.every(function (c) { return c.correctOnce; });
+                // 检查是否所有字都答对过一次（按当前难度）
+                var allChars = App.CharProb.getSemesterChars(this.semesterId, this.difficulty);
+                var allCorrect = allChars.length > 0 && allChars.every(function (c) { return c.correctOnce; });
                 if (allCorrect) {
                     progress.completionDone = true;
                     progress.phase = 'exam';
@@ -2388,13 +2673,19 @@
                     progress.examDone = true;
                     progress.completed = true;
                     progress.phase = 'completed';
-                    // 难度解锁：简单完成学期→解锁中等，中等完成→解锁困难
-                    if (this.difficulty === 'easy' && !App.Storage.isDifficultyUnlocked('medium')) {
-                        App.Storage.unlockDifficulty('medium');
-                        App.Toast.show('解锁中等难度！', 'success');
-                    } else if (this.difficulty === 'medium' && !App.Storage.isDifficultyUnlocked('hard')) {
-                        App.Storage.unlockDifficulty('hard');
-                        App.Toast.show('解锁困难难度！', 'success');
+                    // 解锁本学期下一难度
+                    if (this.difficulty === 'easy') {
+                        App.Toast.show('解锁本学期中等难度！', 'success');
+                    } else if (this.difficulty === 'medium') {
+                        App.Toast.show('解锁本学期困难难度！', 'success');
+                    }
+                    // 解锁下一学期（上一学期任意难度完成即解锁）
+                    var semIdx = -1;
+                    for (var i = 0; i < PinyinData.semesters.length; i++) {
+                        if (PinyinData.semesters[i].id === this.semesterId) { semIdx = i; break; }
+                    }
+                    if (semIdx >= 0 && semIdx < PinyinData.semesters.length - 1) {
+                        App.Toast.show('解锁下一学期：' + PinyinData.semesters[semIdx + 1].name, 'success');
                     }
                 }
                 // 考核失败，下次继续考核阶段
@@ -2406,7 +2697,7 @@
                 progress.halfScore = true;
             }
 
-            App.Semester.setProgress(this.semesterId, progress);
+            App.Semester.setProgress(this.semesterId, this.difficulty, progress);
         },
 
         showResult: function (totalScore, baseScore, timeBonus, gradeBonus, gradeResult, accuracy, earnedBadges, earlyEnd) {
@@ -2441,7 +2732,7 @@
 
             // 阶段信息
             var phaseInfo = document.getElementById('result-phase-info');
-            var progress = App.Semester.getProgress(this.semesterId);
+            var progress = App.Semester.getProgress(this.semesterId, this.difficulty);
             if (progress.completed) {
                 var semName = '';
                 for (var i = 0; i < PinyinData.semesters.length; i++) {
@@ -2511,7 +2802,8 @@
 
             PinyinData.semesters.forEach(function (sem) {
                 var unlocked = App.Semester.isUnlocked(sem.id);
-                var progress = App.Semester.getProgress(sem.id);
+                var curDiff = App.Semester.getCurrentDifficulty(sem.id);
+                var progress = App.Semester.getProgress(sem.id, curDiff);
                 var isCurrent = sem.id === curSem.id;
 
                 var card = document.createElement('div');
@@ -2549,7 +2841,8 @@
                 var cards = list.querySelectorAll('.semester-card.current .sem-status');
                 if (cards.length > 0) {
                     var count = PinyinData.getSemesterCharCount(curSem.id);
-                    var progress = App.Semester.getProgress(curSem.id);
+                    var curDiff = App.Semester.getCurrentDifficulty(curSem.id);
+                    var progress = App.Semester.getProgress(curSem.id, curDiff);
                     cards[0].textContent = App.Semester.getPhaseName(progress.phase) + (count > 0 ? ' · ' + count + '字' : '');
                 }
             });
@@ -2564,7 +2857,20 @@
             var grid = document.getElementById('badges-grid');
             grid.innerHTML = '';
 
+            // 单场勋章
             BADGE_DEFS.forEach(function (def) {
+                var count = badges[def.id] || 0;
+                var card = document.createElement('div');
+                card.className = 'badge-card' + (count > 0 ? ' earned' : '');
+                card.innerHTML = '<div class="badge-icon-lg">' + def.icon + '</div>' +
+                    '<div class="badge-title">' + def.name + '</div>' +
+                    (count > 0 ? '<div class="badge-count">x' + count + '</div>' : '') +
+                    '<div class="badge-desc">' + def.desc + '</div>';
+                grid.appendChild(card);
+            });
+
+            // 积累型勋章
+            CUMULATIVE_BADGE_DEFS.forEach(function (def) {
                 var count = badges[def.id] || 0;
                 var card = document.createElement('div');
                 card.className = 'badge-card' + (count > 0 ? ' earned' : '');
@@ -3278,7 +3584,17 @@
                     break;
 
                 case 'refreshCloudDone':
-                    // 云端刷新完成，执行文件检查
+                    // 云端刷新完成，标记已确认并执行文件检查
+                    if (msg.networkOk !== false) {
+                        // 联网成功 → 标记所有文件已确认
+                        if (msg.cloudFiles) {
+                            for (var cfIdx = 0; cfIdx < msg.cloudFiles.length; cfIdx++) {
+                                var cfName = msg.cloudFiles[cfIdx];
+                                App.Storage._cloudFileConfirmed[cfName] = true;
+                                App.Storage._cloudFileCache[cfName] = true;
+                            }
+                        }
+                    }
                     if (this._waitingCloudRefresh) {
                         this._waitingCloudRefresh = false;
                         this._doCloudCheck();
@@ -3316,6 +3632,20 @@
                 case 'registerResult':
                     if (msg.success) {
                         App.Toast.show('文件已注册到云端：' + (msg.name || ''), 'success');
+                        // 注册成功后绑定ID到★系统设置
+                        if (msg.id && msg.name) {
+                            if (msg.name === MIRROR_FILE_NAME) {
+                                App.Storage._bindMirrorFileId(msg.id);
+                            } else {
+                                // 查找对应的学期ID
+                                for (var ri = 0; ri < PinyinData.semesters.length; ri++) {
+                                    if (getSemesterFileName(PinyinData.semesters[ri].id) === msg.name) {
+                                        App.Storage.setSemesterFileId(PinyinData.semesters[ri].id, msg.id);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
                     } else {
                         App.Toast.show('注册失败：' + (msg.message || ''), 'error');
                     }
@@ -3388,13 +3718,23 @@
         _createMissingFile: function (fileName) {
             var content = '';
             if (fileName === MIRROR_FILE_NAME) {
-                App.Storage._ensureMirrorFile();
-                var entry = findIndexByName(MIRROR_FILE_NAME);
-                if (entry) {
-                    content = readFileData(entry.id) || '';
+                // 镜像文件：检查本地永久绑定的ID
+                var boundMirrorId = App.Storage.getBoundMirrorFileId();
+                if (boundMirrorId) {
+                    var mirrorEntry = findIndexById(boundMirrorId);
+                    if (mirrorEntry) {
+                        content = readFileData(boundMirrorId) || '';
+                    }
+                }
+                if (!content) {
+                    App.Storage._ensureMirrorFile();
+                    var entry = findIndexByName(MIRROR_FILE_NAME);
+                    if (entry) {
+                        content = readFileData(entry.id) || '';
+                    }
                 }
             } else {
-                // 学期文件
+                // 学期文件：先查★系统设置里是否已绑定ID
                 var semId = '';
                 for (var i = 0; i < PinyinData.semesters.length; i++) {
                     if (getSemesterFileName(PinyinData.semesters[i].id) === fileName) {
@@ -3403,10 +3743,30 @@
                     }
                 }
                 if (semId) {
-                    App.Storage._ensureSemesterFile(semId);
-                    var entry2 = findIndexByName(fileName);
-                    if (entry2) {
-                        content = readFileData(entry2.id) || '';
+                    var boundSemId = App.Storage.getSemesterFileId(semId);
+                    if (boundSemId) {
+                        // 已绑定ID → 只认这个ID，不新建
+                        var semEntry = findIndexById(boundSemId);
+                        if (semEntry) {
+                            content = readFileData(boundSemId) || '';
+                        }
+                        // 本地没有绑定的文件 → 不新建，发注册请求让文件管理器处理
+                        if (!content) {
+                            console.log('[学期文件] ' + semId + ' 已绑定ID=' + boundSemId + '，本地缺失，发注册请求');
+                            this.postMsg({
+                                type: 'registerNewFile',
+                                name: fileName,
+                                content: ''
+                            });
+                            return;
+                        }
+                    } else {
+                        // 未绑定ID → 走正常创建流程（_ensureSemesterFile会绑定）
+                        App.Storage._ensureSemesterFile(semId);
+                        var entry2 = findIndexByName(fileName);
+                        if (entry2) {
+                            content = readFileData(entry2.id) || '';
+                        }
                     }
                 }
             }
@@ -3421,32 +3781,92 @@
 
         _importFileContent: function (fileName, content) {
             if (!content) return;
-            var entry = findIndexByName(fileName);
-            if (!entry) {
-                // 本地没有这个文件，创建它
-                createFile(fileName, content);
-            }
-            // 注意：不调用writeFileData/_setMirrorData/_setSemesterData
-            // 因为downloadCloudFileById已经写入了内容，再次写入会导致version+1
-            // 这里只做内存中的数据解析和UI刷新
 
+            // 镜像文件：检查本地永久绑定的ID
             if (fileName === MIRROR_FILE_NAME) {
+                var boundMirrorId = App.Storage.getBoundMirrorFileId();
+                if (boundMirrorId) {
+                    // 已绑定ID → 只认这个ID
+                    var mirrorEntry = findIndexById(boundMirrorId);
+                    if (!mirrorEntry) {
+                        // 本地没有绑定的文件 → 用绑定的ID创建索引（不生成新ID）
+                        var idx = getFileIndex();
+                        idx.push({
+                            name: MIRROR_FILE_NAME, id: boundMirrorId, version: 1,
+                            lastSyncVersion: 0, isNewFile: false, folder: '', owner: '',
+                            createTime: new Date().toLocaleString('zh-CN'),
+                            lastUploadTime: '', lastEditTime: new Date().toLocaleString('zh-CN'),
+                            contentLength: content.length
+                        });
+                        setFileIndex(idx);
+                        localStorage.setItem(STORAGE_PREFIX + 'file_id_' + boundMirrorId, JSON.stringify({ data: content, view: null }));
+                    }
+                } else {
+                    // 未绑定 → 创建并绑定
+                    var entry = findIndexByName(fileName);
+                    if (!entry) {
+                        createFile(fileName, content);
+                        entry = findIndexByName(fileName);
+                    }
+                    if (entry) App.Storage._bindMirrorFileId(entry.id);
+                }
                 try {
                     var data = JSON.parse(content);
                     if (data) {
-                        // 刷新字体等设置
                         if (data.feedbackFontSize) document.documentElement.style.setProperty('--feedback-answer-size', data.feedbackFontSize + 'px');
                         if (data.pinyinDisplaySize) document.documentElement.style.setProperty('--pinyin-display-size', data.pinyinDisplaySize + 'px');
                     }
                 } catch (e) { /* 忽略解析错误 */ }
                 App.Home.render();
-            } else {
+                return;
+            }
+
+            // 学期文件：检查★系统设置里是否已绑定ID
+            var semId = '';
+            for (var i = 0; i < PinyinData.semesters.length; i++) {
+                if (getSemesterFileName(PinyinData.semesters[i].id) === fileName) {
+                    semId = PinyinData.semesters[i].id;
+                    break;
+                }
+            }
+            if (semId) {
+                var boundSemId = App.Storage.getSemesterFileId(semId);
+                if (boundSemId) {
+                    // 已绑定ID → 只认这个ID，不是这个ID的不认不新建
+                    var semEntry = findIndexById(boundSemId);
+                    if (!semEntry) {
+                        // 本地没有绑定的文件 → 用绑定的ID创建索引（不生成新ID）
+                        var semIdx = getFileIndex();
+                        semIdx.push({
+                            name: fileName, id: boundSemId, version: 1,
+                            lastSyncVersion: 0, isNewFile: false, folder: '', owner: '',
+                            createTime: new Date().toLocaleString('zh-CN'),
+                            lastUploadTime: '', lastEditTime: new Date().toLocaleString('zh-CN'),
+                            contentLength: content.length
+                        });
+                        setFileIndex(semIdx);
+                        localStorage.setItem(STORAGE_PREFIX + 'file_id_' + boundSemId, JSON.stringify({ data: content, view: null }));
+                    }
+                } else {
+                    // 未绑定 → 创建并绑定
+                    var entry2 = findIndexByName(fileName);
+                    if (!entry2) {
+                        createFile(fileName, content);
+                        entry2 = findIndexByName(fileName);
+                    }
+                    if (entry2) App.Storage.setSemesterFileId(semId, entry2.id);
+                }
                 var curSem = App.Semester.getCurrentSemester();
                 if (curSem && fileName === getSemesterFileName(curSem.id)) {
-                    // 学期数据已在downloadCloudFileById中写入localStorage
-                    // _getSemesterData会从localStorage读取，无需额外操作
                     App.Home.render();
                 }
+                return;
+            }
+
+            // 非学期非镜像文件 → 正常处理
+            var entry3 = findIndexByName(fileName);
+            if (!entry3) {
+                createFile(fileName, content);
             }
         },
 

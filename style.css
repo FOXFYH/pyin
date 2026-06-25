@@ -130,6 +130,47 @@ body {
     background: rgba(108,92,231,0.2); color: var(--accent-2); font-weight: 600;
 }
 
+/* 进度条 + 升级考核入口 */
+.home-progress-section {
+    display: flex; flex-direction: column; gap: 10px;
+}
+.home-progress-bar-wrap {
+    display: flex; align-items: center; gap: 10px;
+}
+.home-progress-bar {
+    flex: 1; height: 10px; background: var(--bg-card);
+    border: 1px solid var(--border-color); border-radius: 5px; overflow: hidden;
+}
+.home-progress-fill {
+    height: 100%; width: 0%; border-radius: 5px;
+    background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
+    transition: width 0.5s ease;
+}
+.home-progress-fill.complete {
+    background: linear-gradient(90deg, #f39c12, #e67e22);
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+.home-progress-text {
+    font-size: 13px; color: var(--text-muted); white-space: nowrap; font-weight: 600;
+}
+.btn-exam-entry {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 14px; border: 2px solid var(--border-color);
+    border-radius: var(--radius-md); background: var(--bg-card);
+    font-size: 16px; font-weight: 700; font-family: inherit;
+    color: var(--text-muted); cursor: not-allowed; opacity: 0.5;
+    transition: var(--transition);
+}
+.btn-exam-entry.unlocked {
+    border-color: #f39c12; color: #f39c12; cursor: pointer; opacity: 1;
+    background: linear-gradient(135deg, rgba(243,156,18,0.15), rgba(230,126,34,0.1));
+    animation: pulse-glow 2.5s ease-in-out infinite;
+}
+.btn-exam-entry.unlocked:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(243,156,18,0.4); }
+.btn-exam-entry.unlocked:active { transform: translateY(0); }
+.exam-entry-icon { font-size: 20px; }
+.exam-entry-hint { font-size: 12px; font-weight: 400; }
+
 .btn-start {
     width: 100%; padding: 18px; border: none; border-radius: var(--radius-xl);
     font-size: 20px; font-weight: 700; font-family: inherit;
