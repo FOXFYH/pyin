@@ -1,6 +1,8 @@
 (function () {
     'use strict';
     var App = window.App = {};
+    // 用户手动选择的学期（点击学期卡片时设置，优先于 getCurrentSemester）
+    App.selectedSemesterId = null;
 
     // ===== 工具函数 =====
     function shuffle(arr) {
@@ -140,6 +142,16 @@
     var FILE_INDEX_KEY = STORAGE_PREFIX + 'file_index';
     var MIRROR_FILE_NAME = '★系统设置'; // 镜像文件名，以★开头自动识别
     var MIRROR_FILE_ID_KEY = STORAGE_PREFIX + 'mirror_file_id'; // 本地永久绑定的镜像文件ID
+    var TEST_MODE_KEY = STORAGE_PREFIX + 'test_mode'; // 测试模式标志
+    var TEST_BACKUP_PREFIX = STORAGE_PREFIX + 'test_backup_'; // 测试模式数据备份前缀
+
+    // 测试模式配置
+    var TEST_CONFIG = { charsPerSemester: 4, charsPerSession: 2 };
+
+    // 判断是否处于测试模式
+    App.isTestMode = function () {
+        return localStorage.getItem(TEST_MODE_KEY) === '1';
+    };
 
     // 生成10位随机文件ID
     function generateFileId() {
@@ -351,8 +363,8 @@
                 return;
             }
 
-            // 3. 本地没有，且未绑定 → 按需创建（只有当前学期才创建）
-            var curSem = App.Semester.getCurrentSemester();
+            // 3. 本地没有，且未绑定 → 按需创建（只有当前/活跃学期才创建）
+            var curSem = App.Semester.getActiveSemester();
             if (curSem && curSem.id === semesterId) {
                 var data = {
                     semesterProgress: { phase: 'assessment', completed: false, assessmentDone: false, completionDone: false, examDone: false, sessions: 0, halfScore: false },
@@ -745,6 +757,10 @@
         getSemesterChars: function (semesterId, difficulty) {
             var chars = PinyinData.chars[semesterId];
             if (!chars) return [];
+            // 测试模式：每学期只取前 N 个字
+            if (App.isTestMode()) {
+                chars = chars.slice(0, TEST_CONFIG.charsPerSemester);
+            }
             var diff = difficulty || 'easy';
             var result = [];
             for (var i = 0; i < chars.length; i++) {
@@ -790,7 +806,8 @@
             allProgress[difficulty] = progress;
             App.Storage.setSemesterProgressSingle(semesterId, allProgress);
         },
-        // 获取当前应该挑战的学期（第一个有未完成难度的学期）
+        // 获取当前应该挑战的学期（第一个未完成任意难度的学期）
+        // 设计规则：任一难度完成考核即视为已通关，默认前进到下一学期
         getCurrentSemester: function () {
             var semesters = PinyinData.semesters;
             var diffs = ['easy', 'medium', 'hard'];
@@ -800,13 +817,26 @@
                 if (allProgress && allProgress.phase && !allProgress.easy) {
                     allProgress = { easy: allProgress };
                 }
-                var hasIncomplete = diffs.some(function (d) {
-                    return !allProgress || !allProgress[d] || !allProgress[d].completed;
+                // 任一难度完成即视为已通关 → 前进到下一学期
+                var hasCompleted = diffs.some(function (d) {
+                    return allProgress && allProgress[d] && allProgress[d].completed;
                 });
-                if (hasIncomplete) return semesters[i];
+                if (!hasCompleted) return semesters[i];
             }
             // 全部完成，返回最后一个
             return semesters[semesters.length - 1];
+        },
+        // 获取当前活跃学期（优先用户手动选择的，否则用 getCurrentSemester）
+        getActiveSemester: function () {
+            if (App.selectedSemesterId) {
+                for (var i = 0; i < PinyinData.semesters.length; i++) {
+                    if (PinyinData.semesters[i].id === App.selectedSemesterId) {
+                        // 检查是否已解锁
+                        if (this.isUnlocked(App.selectedSemesterId)) return PinyinData.semesters[i];
+                    }
+                }
+            }
+            return this.getCurrentSemester();
         },
         // 获取当前学期的阶段名
         getPhaseName: function (phase) {
@@ -846,6 +876,73 @@
                 }
             }
             return 'easy';
+        },
+
+        // ===== 重新挑战（已完成的难度可重考，新数据覆盖旧数据）=====
+        // 启动重新挑战：备份当前数据 → 重置 progress 和 char data → 标记 active
+        startRechallenge: function (semesterId, difficulty) {
+            var progress = this.getProgress(semesterId, difficulty);
+            if (!progress.completed) {
+                App.Toast.show('该难度尚未完成，无法重新挑战', 'warn');
+                return false;
+            }
+            // 备份原 progress 和 char data（深拷贝）
+            var backup = {
+                semesterId: semesterId,
+                difficulty: difficulty,
+                progress: JSON.parse(JSON.stringify(progress)),
+                charData: JSON.parse(JSON.stringify(App.Storage.getSemesterCharData(semesterId) || {}))
+            };
+            App.Storage.set('rechallenge_backup', backup);
+            App.Storage.set('rechallenge_active', { semesterId: semesterId, difficulty: difficulty });
+
+            // 重置 progress 到初始状态
+            var newProgress = {
+                phase: 'assessment',
+                completed: false,
+                assessmentDone: false,
+                completionDone: false,
+                examDone: false,
+                sessions: 0,
+                halfScore: false,
+                lastWrongChars: []
+            };
+            this.setProgress(semesterId, difficulty, newProgress);
+
+            // 重置 char data 中该难度的 tested/correctOnce
+            var charData = App.Storage.getSemesterCharData(semesterId) || {};
+            for (var key in charData) {
+                if (charData.hasOwnProperty(key) && charData[key].diffProgress && charData[key].diffProgress[difficulty]) {
+                    charData[key].diffProgress[difficulty] = { tested: false, correctOnce: false };
+                }
+            }
+            App.Storage.setSemesterCharData(semesterId, charData);
+            return true;
+        },
+
+        // 完成重新挑战：清除备份，新数据生效
+        finishRechallenge: function () {
+            App.Storage.set('rechallenge_backup', null);
+            App.Storage.set('rechallenge_active', null);
+        },
+
+        // 取消重新挑战：恢复备份数据
+        cancelRechallenge: function () {
+            var backup = App.Storage.get('rechallenge_backup', null);
+            var active = App.Storage.get('rechallenge_active', null);
+            if (!backup || !active) return false;
+            // 恢复 progress 和 char data（覆盖中途的临时修改）
+            this.setProgress(active.semesterId, active.difficulty, backup.progress);
+            App.Storage.setSemesterCharData(active.semesterId, backup.charData);
+            // 清除标志
+            App.Storage.set('rechallenge_backup', null);
+            App.Storage.set('rechallenge_active', null);
+            return true;
+        },
+
+        // 获取当前活跃的重新挑战（无则返回 null）
+        getActiveRechallenge: function () {
+            return App.Storage.get('rechallenge_active', null);
         }
     };
 
@@ -853,6 +950,8 @@
     App.QuestionPicker = {
         // 获取当前每场字数
         getCharsPerSession: function () {
+            // 测试模式：每场固定 2 字
+            if (App.isTestMode()) return TEST_CONFIG.charsPerSession;
             var s = App.Storage.getSettings();
             return s.charsPerSession || 30;
         },
@@ -1146,6 +1245,92 @@
         }
     };
 
+    // ===== 悬浮解释提示系统 =====
+    App.Tooltip = {
+        _el: null,
+        _currentTarget: null,
+        _longPressTimer: null,
+        _hideTimer: null,
+        init: function () {
+            var self = this;
+            this._el = document.getElementById('setting-tip');
+            if (!this._el) return;
+
+            // PC 端：鼠标悬浮（事件委托，支持动态元素）
+            document.addEventListener('mouseover', function (e) {
+                var target = e.target.closest && e.target.closest('[data-tip]');
+                if (target && target !== self._currentTarget) {
+                    self._currentTarget = target;
+                    self.show(target.getAttribute('data-tip'), e);
+                } else if (target) {
+                    self._move(e);
+                }
+            });
+            document.addEventListener('mouseout', function (e) {
+                var target = e.target.closest && e.target.closest('[data-tip]');
+                if (!target) return;
+                // 判断是否真正离开了当前 data-tip 元素
+                var related = e.relatedTarget;
+                if (!related || related.nodeType !== 1 || !target.contains(related)) {
+                    self.hide();
+                    self._currentTarget = null;
+                }
+            });
+
+            // 移动端：长按显示
+            document.addEventListener('touchstart', function (e) {
+                var target = e.target.closest('[data-tip]');
+                if (!target) return;
+                var touch = e.touches[0];
+                self._longPressTimer = setTimeout(function () {
+                    self.show(target.getAttribute('data-tip'), { clientX: touch.clientX, clientY: touch.clientY });
+                }, 500);
+            }, { passive: true });
+            document.addEventListener('touchmove', function () {
+                if (self._longPressTimer) { clearTimeout(self._longPressTimer); self._longPressTimer = null; }
+                self.hide();
+            }, { passive: true });
+            document.addEventListener('touchend', function () {
+                if (self._longPressTimer) { clearTimeout(self._longPressTimer); self._longPressTimer = null; }
+                // 延迟隐藏，方便用户阅读
+                if (self._el.classList.contains('show')) {
+                    self._hideTimer = setTimeout(function () { self.hide(); }, 2500);
+                }
+            });
+        },
+        show: function (text, e) {
+            if (this._hideTimer) { clearTimeout(this._hideTimer); this._hideTimer = null; }
+            this._el.textContent = text;
+            this._el.classList.add('show');
+            this._move(e);
+        },
+        _move: function (e) {
+            var x = e.clientX, y = e.clientY;
+            var tip = this._el;
+            var tipRect = tip.getBoundingClientRect();
+            // 默认显示在鼠标右下方
+            var left = x + 14;
+            var top = y + 18;
+            // 右边界溢出 → 显示在左下方
+            if (left + tipRect.width > window.innerWidth - 10) {
+                left = x - tipRect.width - 14;
+            }
+            // 下边界溢出 → 显示在上方
+            if (top + tipRect.height > window.innerHeight - 10) {
+                top = y - tipRect.height - 14;
+            }
+            // 确保不超出左边
+            if (left < 10) left = 10;
+            if (top < 10) top = 10;
+            tip.style.left = left + 'px';
+            tip.style.top = top + 'px';
+        },
+        hide: function () {
+            this._el.classList.remove('show');
+            this._currentTarget = null;
+        }
+    };
+
     // ===== Toast =====
     App.Toast = {
         show: function (msg, type) {
@@ -1200,19 +1385,32 @@
             document.getElementById('home-accuracy').textContent = acc + '%';
             document.getElementById('home-sessions').textContent = student.sessions;
 
+            // 测试模式标识
+            var testBadge = document.getElementById('test-mode-badge');
+            if (testBadge) testBadge.style.display = App.isTestMode() ? 'inline-block' : 'none';
+
             // 勋章总数
             var badgeCount = 0;
             var badges = student.badges || {};
             for (var k in badges) { badgeCount += badges[k] || 0; }
             document.getElementById('home-badges').textContent = badgeCount;
 
-            // 当前学期
-            var curSem = App.Semester.getCurrentSemester();
-            var curDiff = App.Semester.getCurrentDifficulty(curSem.id);
+            // 当前学期（优先用户选择的）
+            var curSem = App.Semester.getActiveSemester();
+            // 难度优先使用用户在主页选中的，否则用当前应挑战的难度
+            var curDiff = App.ExamSetup.selectedDifficulty || App.Semester.getCurrentDifficulty(curSem.id);
+            // 校验选中难度是否已解锁，未解锁则回退到当前难度
+            if (curDiff !== 'easy' && !App.Semester.isDifficultyUnlocked(curSem.id, curDiff)) {
+                curDiff = App.Semester.getCurrentDifficulty(curSem.id);
+                App.ExamSetup.selectedDifficulty = curDiff;
+            }
             var progress = App.Semester.getProgress(curSem.id, curDiff);
             document.getElementById('home-semester-name').textContent = curSem.name;
             var diffName = { easy: '简单', medium: '中等', hard: '困难' }[curDiff];
             document.getElementById('home-semester-phase').textContent = App.Semester.getPhaseName(progress.phase) + ' · ' + diffName;
+
+            // 渲染难度切换按钮
+            this.renderDifficultyButtons(curSem.id, curDiff);
 
             // 渲染进度条和升级考核入口
             this.renderProgressBar(curSem.id, progress, curDiff);
@@ -1274,27 +1472,71 @@
             fillEl.classList.toggle('complete', percent >= 100);
             textEl.textContent = phaseLabel + ' ' + currentCount + '/' + total + ' (' + percent + '%)';
 
-            // 升级考核入口：只有进入exam阶段才点亮
-            var canChallenge = (progress.phase === 'exam');
+            // 升级考核入口：exam 阶段或已完成的难度都可点击
+            // - exam 阶段：显示"升级考核"
+            // - completed：显示"重新挑战"（允许二刷三刷）
+            // - 其他：锁定
+            var canChallenge = (progress.phase === 'exam' || progress.phase === 'completed');
+            var btnTextEl = btnEl.querySelector('.exam-entry-text');
             if (canChallenge) {
                 btnEl.classList.remove('locked');
                 btnEl.classList.add('unlocked');
-                hintEl.textContent = '点击挑战';
+                if (progress.phase === 'completed') {
+                    if (btnTextEl) btnTextEl.textContent = '重新挑战';
+                    hintEl.textContent = '点击重考';
+                } else {
+                    if (btnTextEl) btnTextEl.textContent = '升级考核';
+                    hintEl.textContent = '点击挑战';
+                }
                 hintEl.style.color = '';
             } else {
                 btnEl.classList.remove('unlocked');
                 btnEl.classList.add('locked');
-                hintEl.textContent = progress.phase === 'completed' ? '已通过' : '进度未满';
+                if (btnTextEl) btnTextEl.textContent = '升级考核';
+                hintEl.textContent = '进度未满';
             }
+        },
+
+        // 渲染主页难度切换按钮：高亮选中难度，锁定未解锁难度
+        renderDifficultyButtons: function (semesterId, currentDiff) {
+            var btns = document.querySelectorAll('.home-difficulty .diff-btn');
+            if (!btns || !btns.length) return;
+            btns.forEach(function (btn) {
+                var diff = btn.getAttribute('data-diff');
+                var unlocked = App.Semester.isDifficultyUnlocked(semesterId, diff);
+                btn.classList.toggle('active', diff === currentDiff);
+                btn.classList.toggle('locked', !unlocked);
+                btn.disabled = !unlocked;
+            });
+        },
+
+        // 主页选择难度：保存选择并刷新主页显示
+        selectDifficulty: function (diff) {
+            var curSem = App.Semester.getActiveSemester();
+            if (!App.Semester.isDifficultyUnlocked(curSem.id, diff)) {
+                var hint = diff === 'medium' ? '需先通过本学期简单难度考核' : '需先通过本学期中等难度考核';
+                App.Toast.show('该难度未解锁：' + hint, 'warn');
+                return;
+            }
+            App.ExamSetup.selectedDifficulty = diff;
+            App.Storage.set('selected_difficulty', diff);
+            App.Sound.playClick();
+            var diffName = { easy: '简单', medium: '中等', hard: '困难' }[diff];
+            App.Toast.show('已选择 ' + diffName + ' 难度', 'success');
+            this.render();
         }
     };
 
     // ===== 考试设置 =====
     App.ExamSetup = {
-        selectedDifficulty: 'easy',
+        selectedDifficulty: (function () {
+            var saved = App.Storage ? App.Storage.get('selected_difficulty', null) : null;
+            return saved || 'easy';
+        })(),
+        directStart: false, // true=选择难度后直接开始考试，false=返回主页
 
         render: function () {
-            var curSem = App.Semester.getCurrentSemester();
+            var curSem = App.Semester.getActiveSemester();
             var curDiff = App.Semester.getCurrentDifficulty(curSem.id);
             var progress = App.Semester.getProgress(curSem.id, curDiff);
             var diffName = { easy: '简单', medium: '中等', hard: '困难' }[curDiff];
@@ -1314,7 +1556,7 @@
         },
 
         selectDifficulty: function (diff) {
-            var curSem = App.Semester.getCurrentSemester();
+            var curSem = App.Semester.getActiveSemester();
             // 检查难度是否已解锁（按学期）
             if (!App.Semester.isDifficultyUnlocked(curSem.id, diff)) {
                 var hint = diff === 'medium' ? '需先通过本学期简单难度考核' : '需先通过本学期中等难度考核';
@@ -1322,24 +1564,71 @@
                 return;
             }
             App.ExamSetup.selectedDifficulty = diff;
+            App.Storage.set('selected_difficulty', diff);
             App.Sound.playClick();
-            this.render();
-            // 直接开始考试
-            App.Exam.start(diff);
+            if (App.ExamSetup.directStart) {
+                // 升级考核：选择难度后直接开始考试
+                App.ExamSetup.directStart = false;
+                App.Exam.start(diff);
+            } else {
+                // 普通选择：保存难度，返回主页
+                App.Toast.show('已选择 ' + ({ easy: '简单', medium: '中等', hard: '困难' }[diff]) + ' 难度', 'success');
+                App.switchView('home');
+            }
         },
 
-        // 升级考核入口
+        // 升级考核入口（也用于重新挑战已完成的难度）
         enterExamChallenge: function () {
-            var curSem = App.Semester.getCurrentSemester();
-            var curDiff = App.Semester.getCurrentDifficulty(curSem.id);
+            var curSem = App.Semester.getActiveSemester();
+            // 使用主页选中的难度，回退到当前应挑战的难度
+            var curDiff = App.ExamSetup.selectedDifficulty || App.Semester.getCurrentDifficulty(curSem.id);
+            // 校验难度已解锁
+            if (!App.Semester.isDifficultyUnlocked(curSem.id, curDiff)) {
+                App.Toast.show('该难度未解锁', 'warn');
+                return;
+            }
             var progress = App.Semester.getProgress(curSem.id, curDiff);
+
+            // 已完成的难度：弹出重新挑战确认
+            if (progress.completed) {
+                var diffName = { easy: '简单', medium: '中等', hard: '困难' }[curDiff];
+                App.Modal.open('重新挑战 ' + diffName + ' 难度',
+                    '<div style="line-height:1.7">' +
+                    '<p>当前难度已通过，重新挑战将：</p>' +
+                    '<ul style="margin:8px 0;padding-left:20px;color:var(--text-secondary)">' +
+                    '<li>清空本难度当前进度（重置摸底/补全/考核）</li>' +
+                    '<li>从摸底阶段重新开始考核</li>' +
+                    '<li>挑战完成后新成绩将<b style="color:var(--gold)">覆盖</b>旧成绩</li>' +
+                    '<li style="color:var(--warning)">⚠️ 中途退出将不更新原数据</li>' +
+                    '</ul>' +
+                    '</div>',
+                    '<button class="btn-modal-cancel" onclick="App.Modal.close()">取消</button>' +
+                    '<button class="btn-modal-primary" onclick="App.ExamSetup._confirmRechallenge()">开始重新挑战</button>');
+                return;
+            }
+
+            // exam 阶段：进入难度选择后直接开始考核
             if (progress.phase !== 'exam') {
                 App.Toast.show('需完成摸底和补全阶段后才能参加升级考核', 'warn');
                 return;
             }
-            // 进入难度选择
+            App.ExamSetup.directStart = true;
             App.switchView('exam-setup');
             App.Toast.show('请选择难度参加升级考核', 'info');
+        },
+
+        // 确认开始重新挑战
+        _confirmRechallenge: function () {
+            App.Modal.close();
+            var curSem = App.Semester.getActiveSemester();
+            var curDiff = App.ExamSetup.selectedDifficulty || App.Semester.getCurrentDifficulty(curSem.id);
+            if (!App.Semester.startRechallenge(curSem.id, curDiff)) {
+                App.Toast.show('无法启动重新挑战', 'error');
+                return;
+            }
+            App.Toast.show('已开始重新挑战，请完成全部流程', 'info');
+            // 直接开始考试（标记为重新挑战模式）
+            App.Exam.start(curDiff, { isRechallenge: true });
         }
     };
 
@@ -1386,11 +1675,22 @@
         phase: 'assessment',
         // 是否已答题
         answered: false,
+        // 是否为重新挑战模式（已完成的难度重新考核，中途退出恢复原数据）
+        _isRechallenging: false,
 
-        start: function (diff) {
+        start: function (diff, options) {
+            // 未指定难度时用当前选中的难度
+            if (!diff) diff = App.ExamSetup.selectedDifficulty || 'easy';
+            // 标记是否为重新挑战模式
+            this._isRechallenging = !!(options && options.isRechallenge);
             // 检查是否有保存的进度可以恢复
             var saved = this.getSavedProgress();
             if (saved) {
+                // 若恢复的进度属于当前活跃的重新挑战，则保持重新挑战标志
+                var activeRc = App.Semester.getActiveRechallenge();
+                if (activeRc && activeRc.semesterId === saved.semesterId && activeRc.difficulty === saved.difficulty) {
+                    this._isRechallenging = true;
+                }
                 // 加载所需学期数据后恢复
                 var self = this;
                 var semestersToLoad = [saved.semesterId];
@@ -1426,7 +1726,7 @@
             this.charResults = {};
             this.answered = false;
 
-            var curSem = App.Semester.getCurrentSemester();
+            var curSem = App.Semester.getActiveSemester();
             this.semesterId = curSem.id;
             var progress = App.Semester.getProgress(curSem.id, diff);
             this.phase = progress.phase;
@@ -2553,6 +2853,15 @@
         exitAfterPause: function () {
             if (this._pauseCountdownTimer) { clearInterval(this._pauseCountdownTimer); this._pauseCountdownTimer = null; }
             App.Modal.close();
+            // 重新挑战模式：暂停退出视为放弃，恢复原数据，不保存中途进度
+            if (this._isRechallenging) {
+                this.clearSavedProgress();
+                App.Semester.cancelRechallenge();
+                this._isRechallenging = false;
+                App.Toast.show('重新挑战已取消，原数据已恢复', 'info');
+                App.switchView('home');
+                return;
+            }
             // 当前题已判错，索引前进到下一题再保存，以便下次恢复从下一题开始
             this.currentIndex++;
             this.totalTime += (this.maxTime - this.timeLeft);
@@ -2736,6 +3045,23 @@
 
             // 比赛结束后自动同步到云端
             App.FileSync.uploadData();
+
+            // 重新挑战模式：根据是否完成 exam 决定保留新数据或恢复原数据
+            if (this._isRechallenging) {
+                var latestProgress = App.Semester.getProgress(this.semesterId, this.difficulty);
+                if (latestProgress.completed) {
+                    // 挑战完成（exam 100%通过），新数据生效
+                    App.Semester.finishRechallenge();
+                    this._isRechallenging = false;
+                    App.Toast.show('重新挑战完成，新成绩已覆盖旧数据', 'success');
+                } else if (earlyEnd || (this.phase === 'exam' && accuracy < 100)) {
+                    // 提前结束 或 exam 失败：视为放弃，恢复原数据
+                    App.Semester.cancelRechallenge();
+                    this._isRechallenging = false;
+                    App.Toast.show('重新挑战未完成，已恢复原数据', 'warn');
+                }
+                // 否则继续挑战（摸底/补全/考核阶段正常推进，不 finish 也不 cancel）
+            }
         },
 
         updateSemesterProgress: function (accuracy) {
@@ -2788,6 +3114,8 @@
                         unlocks: unlocks,
                         diffName: diffName
                     };
+                    // 考核通过后清除手动选择的学期，让 getCurrentSemester 自动前进到下一学期
+                    App.selectedSemesterId = null;
                 }
                 // 考核失败，下次继续考核阶段
             }
@@ -2943,7 +3271,7 @@
                 card.className = 'semester-card' + (isCurrent ? ' current' : '') + (!unlocked ? ' locked' : '');
 
                 var icon = progress.completed ? '✅' : (isCurrent ? '📖' : (!unlocked ? '🔒' : '📘'));
-                var status = progress.completed ? '已完成' : (isCurrent ? App.Semester.getPhaseName(progress.phase) : (!unlocked ? '未解锁' : '待挑战'));
+                var status = progress.completed ? '已完成' : (isCurrent ? App.Semester.getPhaseName(progress.phase) : (!unlocked ? '未解锁' : '可挑战'));
                 var phaseTag = isCurrent && !progress.completed ? '<span class="sem-phase-tag">' + App.Semester.getPhaseName(progress.phase) + '</span>' : '';
                 var charCount = PinyinData.getSemesterCharCount(sem.id);
 
@@ -2954,14 +3282,14 @@
 
                 if (unlocked) {
                     card.onclick = function () {
-                        if (isCurrent) {
-                            App.switchView('setup');
-                        } else if (progress.completed) {
-                            // 已完成学期可再次挑战（分数减半）
+                        // 已解锁的学期都可点击进入
+                        App.selectedSemesterId = sem.id;
+                        if (progress.completed) {
                             App.Toast.show('再次挑战该学期将分数减半', 'info');
-                        } else {
-                            App.Toast.show('请先完成当前学期', 'warning');
                         }
+                        // 进入难度选择，选择后返回主页
+                        App.ExamSetup.directStart = false;
+                        App.switchView('exam-setup');
                     };
                 }
 
@@ -2984,6 +3312,8 @@
 
     // ===== 勋章 =====
     App.Badges = {
+        // 当前激活的标签：badges 或 scores
+        currentTab: 'badges',
         render: function () {
             var student = App.Storage.getStudent();
             var badges = student.badges || {};
@@ -3013,6 +3343,163 @@
                     '<div class="badge-desc">' + def.desc + '</div>';
                 grid.appendChild(card);
             });
+
+            // 恢复上次的标签状态
+            this.switchTab(this.currentTab);
+        },
+
+        // 切换荣誉/成绩标签
+        switchTab: function (tab) {
+            this.currentTab = tab;
+            var badgesGrid = document.getElementById('badges-grid');
+            var scoresTable = document.getElementById('scores-table');
+            var tabBtns = document.querySelectorAll('#badges-tab-bar .tab-btn');
+            tabBtns.forEach(function (btn, idx) {
+                var isActive = (tab === 'badges' && idx === 0) || (tab === 'scores' && idx === 1);
+                btn.classList.toggle('active', isActive);
+            });
+            if (badgesGrid) badgesGrid.style.display = tab === 'badges' ? 'grid' : 'none';
+            if (scoresTable) scoresTable.style.display = tab === 'scores' ? 'block' : 'none';
+            if (tab === 'scores') this.renderScores();
+        },
+
+        // 渲染成绩表格：每学期每难度的状态/正确率/场次
+        renderScores: function () {
+            var table = document.getElementById('scores-table');
+            if (!table) return;
+            var semesters = PinyinData.semesters;
+            var diffs = ['easy', 'medium', 'hard'];
+            var diffNames = { easy: '简单', medium: '中等', hard: '困难' };
+            var html = '<div class="score-row header">' +
+                '<div class="score-cell">学期</div>' +
+                '<div class="score-cell">难度</div>' +
+                '<div class="score-cell">状态</div>' +
+                '<div class="score-cell">正确率</div>' +
+                '<div class="score-cell">场次</div>' +
+                '</div>';
+            var self = this;
+            semesters.forEach(function (sem) {
+                diffs.forEach(function (diff) {
+                    var progress = App.Semester.getProgress(sem.id, diff);
+                    // 统计该难度下已测试/已答对字数
+                    var stats = self.getDiffStats(sem.id, diff);
+                    var accuracy = stats.tested > 0 ? Math.round(stats.correct / stats.tested * 100) : 0;
+                    var status, statusClass;
+                    if (progress.completed) {
+                        status = '已完成';
+                        statusClass = 'done';
+                    } else if (App.Semester.isDifficultyUnlocked(sem.id, diff)) {
+                        status = App.Semester.getPhaseName(progress.phase);
+                        statusClass = 'progress';
+                    } else {
+                        status = '未解锁';
+                        statusClass = 'locked';
+                    }
+                    html += '<div class="score-row">' +
+                        '<div class="score-cell">' + sem.name + '</div>' +
+                        '<div class="score-cell"><span class="score-diff ' + diff + '">' + diffNames[diff] + '</span></div>' +
+                        '<div class="score-cell"><span class="score-status ' + statusClass + '">' + status + '</span></div>' +
+                        '<div class="score-cell">' + accuracy + '%</div>' +
+                        '<div class="score-cell">' + (progress.sessions || 0) + '</div>' +
+                        '</div>';
+                });
+            });
+            table.innerHTML = html;
+        },
+
+        // 获取某学期某难度的字数统计（已测试/已答对）
+        getDiffStats: function (semesterId, difficulty) {
+            var allChars = App.CharProb.getSemesterChars(semesterId, difficulty);
+            var tested = 0, correct = 0;
+            allChars.forEach(function (c) {
+                if (c.tested) tested++;
+                if (c.correctOnce) correct++;
+            });
+            return { tested: tested, correct: correct, total: allChars.length };
+        }
+    };
+
+    // ===== 测试模式 =====
+    // 进入测试模式：备份所有数据 → 清空 → 设标志 → 刷新
+    // 退出测试模式：清空 → 恢复备份 → 清标志 → 刷新
+    App.TestMode = {
+        enter: function () {
+            App.Modal.open('进入测试模式',
+                '<div style="line-height:1.7">' +
+                '<p>测试模式用于快速验证升级流程：</p>' +
+                '<ul style="margin:8px 0;padding-left:20px;color:var(--text-secondary)">' +
+                '<li>每学期仅 ' + TEST_CONFIG.charsPerSemester + ' 个字</li>' +
+                '<li>每场考 ' + TEST_CONFIG.charsPerSession + ' 个字（2场即可通关）</li>' +
+                '<li>测试进度独立保存，不影响正常数据</li>' +
+                '<li>退出后自动恢复正常数据</li>' +
+                '</ul>' +
+                '<p style="color:var(--gold)">将刷新页面进入测试模式。</p>' +
+                '</div>',
+                '<button class="btn-modal-cancel" onclick="App.Modal.close()">取消</button>' +
+                '<button class="btn-modal-primary" onclick="App.TestMode._doEnter()">进入测试模式</button>');
+        },
+        _doEnter: function () {
+            // 认证相关 key 不备份不清空，保持登录状态
+            var authKeys = [
+                STORAGE_PREFIX + 'auth_user',
+                STORAGE_PREFIX + 'auth_pass',
+                STORAGE_PREFIX + 'auth_logged_in'
+            ];
+            // 1. 备份所有 PINYINLIANXI_ 开头的 key（排除测试模式标志、备份本身、认证 key）
+            var keysToBackup = [];
+            for (var i = 0; i < localStorage.length; i++) {
+                var key = localStorage.key(i);
+                if (key.indexOf(STORAGE_PREFIX) === 0 &&
+                    key !== TEST_MODE_KEY &&
+                    key.indexOf(TEST_BACKUP_PREFIX) !== 0 &&
+                    authKeys.indexOf(key) === -1) {
+                    keysToBackup.push(key);
+                }
+            }
+            keysToBackup.forEach(function (key) {
+                localStorage.setItem(TEST_BACKUP_PREFIX + key, localStorage.getItem(key));
+                localStorage.removeItem(key);
+            });
+            // 2. 设测试模式标志
+            localStorage.setItem(TEST_MODE_KEY, '1');
+            // 3. 刷新页面
+            window.location.reload();
+        },
+        exit: function () {
+            App.Modal.open('退出测试模式',
+                '<p style="text-align:center">将退出测试模式，恢复正常数据。测试期间的进度将被清除。</p>',
+                '<button class="btn-modal-cancel" onclick="App.Modal.close()">取消</button>' +
+                '<button class="btn-modal-primary" onclick="App.TestMode._doExit()">退出测试模式</button>');
+        },
+        _doExit: function () {
+            // 1. 清空当前所有 PINYINLIANXI_ 数据（测试模式产生的）
+            var keysToRemove = [];
+            for (var i = 0; i < localStorage.length; i++) {
+                var key = localStorage.key(i);
+                if (key.indexOf(STORAGE_PREFIX) === 0 &&
+                    key !== TEST_MODE_KEY &&
+                    key.indexOf(TEST_BACKUP_PREFIX) !== 0) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(function (key) { localStorage.removeItem(key); });
+            // 2. 恢复备份
+            var backupKeys = [];
+            for (var i = 0; i < localStorage.length; i++) {
+                var key = localStorage.key(i);
+                if (key.indexOf(TEST_BACKUP_PREFIX) === 0) {
+                    backupKeys.push(key);
+                }
+            }
+            backupKeys.forEach(function (bk) {
+                var originalKey = bk.substring(TEST_BACKUP_PREFIX.length);
+                localStorage.setItem(originalKey, localStorage.getItem(bk));
+                localStorage.removeItem(bk);
+            });
+            // 3. 清测试模式标志
+            localStorage.removeItem(TEST_MODE_KEY);
+            // 4. 刷新页面
+            window.location.reload();
         }
     };
 
@@ -3134,6 +3621,22 @@
                 var s = App.Storage.getSettings(); s.pinyinDisplaySize = parseInt(this.value); App.Storage.setSettings(s);
                 document.documentElement.style.setProperty('--pinyin-display-size', this.value + 'px');
             };
+
+            // 测试模式按钮状态
+            var testBtn = document.getElementById('setting-test-mode-btn');
+            if (testBtn) {
+                if (App.isTestMode()) {
+                    testBtn.textContent = '退出测试';
+                    testBtn.style.background = 'rgba(251,191,36,0.2)';
+                    testBtn.style.color = 'var(--gold)';
+                    testBtn.onclick = function () { App.TestMode.exit(); };
+                } else {
+                    testBtn.textContent = '进入测试';
+                    testBtn.style.background = '';
+                    testBtn.style.color = '';
+                    testBtn.onclick = function () { App.TestMode.enter(); };
+                }
+            }
         },
 
         // 难度参数解锁状态
@@ -3506,6 +4009,8 @@
         // 上传当前数据到云端（同步镜像文件+当前学期文件）
         uploadData: function () {
             if (this._syncing) return;
+            // 测试模式不同步，避免污染云端数据
+            if (App.isTestMode()) return;
             // 没有账密就不同步
             if (!App.Auth.getUsername() || !App.Auth.getPassword()) return;
             this._syncing = true;
@@ -3677,6 +4182,11 @@
 
         // 处理来自文件管理器的消息
         handleMessage: function (msg) {
+            // 测试模式：忽略所有云端同步消息，避免污染测试数据
+            if (App.isTestMode()) {
+                this._syncing = false;
+                return;
+            }
             switch (msg.type) {
                 case 'openFile':
                     // 文件被打开，导入数据到对应文件
@@ -4007,6 +4517,8 @@
         startAutoSave: function () {
             var self = this;
             this.stopAutoSave();
+            // 测试模式不启动自动同步
+            if (App.isTestMode()) return;
             var s = App.Storage.getSettings();
             var interval = (s.autoSaveInterval || 1) * 60000;
             this._autoSaveTimer = setInterval(function () {
@@ -4076,6 +4588,7 @@
     App.init = function () {
         App.Sound.init();
         App.FX.init();
+        App.Tooltip.init();
         App.FileSync.initFrame();
         App.Exam._loadOptionFontSize();
 
@@ -4111,6 +4624,19 @@
         App.Storage.migrateFromOldFormat();
         // 确保所有必要文件存在
         App.Storage.initFiles();
+
+        // 检测未完成的重新挑战（应用中途退出/刷新）：恢复原数据
+        var pendingRechallenge = App.Semester.getActiveRechallenge();
+        if (pendingRechallenge) {
+            App.Semester.cancelRechallenge();
+            // 同时清除可能残留的考试进度（防止恢复到中途的考试状态）
+            App.Storage.setExamProgress(null);
+            console.log('[Rechallenge] 检测到未完成的重新挑战，已恢复原数据：' +
+                pendingRechallenge.semesterId + ' / ' + pendingRechallenge.difficulty);
+            setTimeout(function () {
+                App.Toast.show('上次重新挑战未完成，原数据已恢复', 'info');
+            }, 500);
+        }
 
         // 应用保存的字体大小设置
         var s = App.Storage.getSettings();

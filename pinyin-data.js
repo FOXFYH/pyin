@@ -276,7 +276,12 @@ var PinyinData = {
   // 获取学期字数（无需加载数据）
   getSemesterCharCount: function(semesterId) {
     if (this._loaded[semesterId] && this.chars[semesterId]) {
-      return this.chars[semesterId].length;
+      var count = this.chars[semesterId].length;
+      // 测试模式：每学期最多 4 字
+      if (typeof App !== 'undefined' && App.isTestMode && App.isTestMode()) {
+        return Math.min(4, count);
+      }
+      return count;
     }
     return 0;
   }
