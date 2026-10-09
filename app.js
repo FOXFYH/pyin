@@ -3682,7 +3682,7 @@
             // 1. 先停止一切自动同步
             App.FileSync.stopAutoSave();
 
-            // 2. 通知文件管理器删除云端数据（异步）
+            // 2. 通知文件管理器删除云端数据（6.0：逐个文件删除云端行）
             App.Toast.show('正在清理云端数据，请稍候...', 'info');
             App.Modal.close();
 
@@ -3690,19 +3690,36 @@
             var handlerKey = '_resetWaiting';
             App.FileSync[handlerKey] = true;
 
-            // 发送删除云端数据指令
-            App.FileSync.postMsg({ type: 'deleteAllCloudData' });
+            // 逐个发送云端删除指令（6.0 无批量删除）
+            var idx = [];
+            try { idx = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'file_index') || '[]'); } catch (e) { idx = []; }
+            var sentCount = 0;
+            for (var ri2 = 0; ri2 < idx.length; ri2++) {
+                var fid = idx[ri2] && idx[ri2].id;
+                if (fid && !idx[ri2].isNewFile) {
+                    App.FileSync.postMsg({ type: 'fileDeleted_local', fileId: fid });
+                    sentCount++;
+                }
+            }
 
-            // 设置超时兜底：30秒后如果没收到回复也清本地
+            // 设置超时兜底：5秒后清本地（云端删除在后台继续）
             var fallbackTimer = setTimeout(function () {
                 if (App.FileSync[handlerKey]) {
                     App.FileSync[handlerKey] = false;
                     self._doLocalReset();
                 }
-            }, 30000);
+            }, 5000);
 
             // 保存timer以便收到回复时清除
             App.FileSync._resetFallbackTimer = fallbackTimer;
+
+            // 无云端文件 → 直接清本地
+            if (sentCount === 0) {
+                clearTimeout(fallbackTimer);
+                App.FileSync._resetFallbackTimer = null;
+                App.FileSync[handlerKey] = false;
+                self._doLocalReset();
+            }
         },
 
         _doLocalReset: function () {
@@ -3818,20 +3835,24 @@
             App.Auth.showLogin();
         },
 
-        // 将认证信息同步到文件管理器iframe
+        // 将认证信息同步到文件管理器（后台+弹窗两个iframe）
         syncAuthToFileManager: function () {
             var username = this.getUsername();
             var password = this.getPassword();
             if (!username) return;
-            // 等待文件管理器iframe加载完成后发送
-            var frame = document.getElementById('fileManagerFrame');
-            if (frame && frame.contentWindow) {
-                frame.contentWindow.postMessage({
-                    target: 'fileManager',
-                    type: 'authChanged',
-                    username: username,
-                    password: password
-                }, '*');
+            var frames = [document.getElementById('fileManagerBg'), document.getElementById('fileManagerFrame')];
+            for (var i = 0; i < frames.length; i++) {
+                var frame = frames[i];
+                if (frame && frame.contentWindow) {
+                    try {
+                        frame.contentWindow.postMessage({
+                            target: 'fileManager',
+                            type: 'authChanged',
+                            username: username,
+                            password: password
+                        }, '*');
+                    } catch (e) { }
+                }
             }
         },
 
@@ -3913,12 +3934,14 @@
             return curSem ? getSemesterFileName(curSem.id) : '';
         },
 
-        // 获取iframe引用
+        // 获取当前活动iframe引用（弹窗打开时用弹窗，否则用后台）
+        _isManagerOpen: false,
         getFrame: function () {
-            if (!this._frame) {
-                this._frame = document.getElementById('fileManagerFrame');
+            if (this._isManagerOpen) {
+                var modalFrame = document.getElementById('fileManagerFrame');
+                if (modalFrame) return modalFrame;
             }
-            return this._frame;
+            return document.getElementById('fileManagerBg') || document.getElementById('fileManagerFrame');
         },
 
         // 向文件管理器发消息
@@ -3926,16 +3949,39 @@
             var frame = this.getFrame();
             if (!frame || !frame.contentWindow) return;
             msg.target = 'fileManager';
-            frame.contentWindow.postMessage(msg, '*');
+            try { frame.contentWindow.postMessage(msg, '*'); } catch (e) { }
         },
 
-        // 初始化文件管理器
+        // 推送某文件内容到管理器（未就绪时先排队）
+        _pendingPush: [],
+        _pushContent: function (name, content) {
+            if (!name || content === undefined || content === null) return;
+            if (!this._frameReady) { this._pendingPush.push({ name: name, content: content }); return; }
+            this.postMsg({ type: 'contentChanged', name: name, content: content });
+        },
+        _flushPending: function () {
+            if (!this._pendingPush || !this._pendingPush.length) return;
+            var q = this._pendingPush; this._pendingPush = [];
+            for (var i = 0; i < q.length; i++) this.postMsg({ type: 'contentChanged', name: q[i].name, content: q[i].content });
+        },
+        // 推送本地所有非空文件内容
+        pushAllLocalFiles: function () {
+            var idx = getFileIndex();
+            for (var i = 0; i < idx.length; i++) {
+                var entry = idx[i];
+                if (!entry.name || !entry.id) continue;
+                var content = readFileData(entry.id);
+                if (content) this._pushContent(entry.name, content);
+            }
+        },
+
+        // 初始化文件管理器（后台iframe常驻 + 弹窗iframe按需）
         initFrame: function () {
             var self = this;
-            var frame = this.getFrame();
-            if (!frame) return;
+            var bg = document.getElementById('fileManagerBg');
+            var modalFrame = document.getElementById('fileManagerFrame');
 
-            frame.onload = function () {
+            var onReady = function () {
                 self._frameReady = true;
                 // 发送初始化配置
                 self.postMsg({
@@ -3949,24 +3995,47 @@
                         mirrorPrefix: '★'
                     }
                 });
+                // 通知管理器宿主已就绪，启动自动同步
+                self.postMsg({ type: 'mainReady' });
                 // 传递认证信息到文件管理器
                 App.Auth.syncAuthToFileManager();
+                // 补发排队中的内容
+                self._flushPending();
             };
+
+            if (bg) {
+                bg.addEventListener('load', onReady);
+                bg.src = '文件管理.HTML';
+            }
+            if (modalFrame) {
+                modalFrame.addEventListener('load', function () {
+                    App.Auth.syncAuthToFileManager();
+                });
+            }
         },
 
         // 打开文件管理器弹窗
         openManager: function () {
+            var self = this;
             var modal = document.getElementById('file-modal');
             if (!modal) return;
             modal.classList.add('active');
+            this._isManagerOpen = true;
 
             // 延迟加载iframe：确保容器已可见后再加载，修复老WebView输入框不渲染问题
             var frame = document.getElementById('fileManagerFrame');
             if (frame && (frame.src === 'about:blank' || frame.src === '' || !frame.src)) {
+                frame.addEventListener('load', function once() {
+                    frame.removeEventListener('load', once);
+                    self._notifyManagerOpen();
+                });
                 frame.src = '文件管理.HTML';
             }
+            this._notifyManagerOpen();
+        },
 
-            // 通知文件管理器当前编辑的文件
+        // 通知管理器当前编辑的文件
+        _notifyManagerOpen: function () {
             var curFileName = this.getCurrentEditFileName();
             var curContent = '';
             var curEntry = findIndexByName(curFileName);
@@ -3982,13 +4051,9 @@
 
         // 关闭文件管理器弹窗
         closeManager: function () {
+            this._isManagerOpen = false;
             var modal = document.getElementById('file-modal');
             if (modal) modal.classList.remove('active');
-            // 恢复文件管理器iframe
-            var frame = document.getElementById('fileManagerFrame');
-            if (frame && frame.src.indexOf('denglu.html') > -1) {
-                frame.src = '文件管理.HTML';
-            }
         },
 
         // 通知文件管理器当前编辑文件内容已变更
@@ -4002,11 +4067,11 @@
                     currentFileName: curFileName,
                     currentContent: content
                 });
+                this._pushContent(curFileName, content);
             }
-            this.postMsg({ type: 'contentChanged' });
         },
 
-        // 上传当前数据到云端（同步镜像文件+当前学期文件）
+        // 推送当前数据到文件管理器并触发同步（镜像文件+当前学期文件）
         uploadData: function () {
             if (this._syncing) return;
             // 测试模式不同步，避免污染云端数据
@@ -4015,14 +4080,15 @@
             if (!App.Auth.getUsername() || !App.Auth.getPassword()) return;
             this._syncing = true;
 
-            // 先确保镜像文件内容是最新的
+            // 先确保镜像文件内容是最新的，并推送
             var mirrorEntry = findIndexByName(MIRROR_FILE_NAME);
             if (mirrorEntry) {
                 var mirrorData = App.Storage._getMirrorData();
                 writeFileData(mirrorEntry.id, JSON.stringify(mirrorData));
+                this._pushContent(MIRROR_FILE_NAME, readFileData(mirrorEntry.id) || '');
             }
 
-            // 确保当前学期文件内容是最新的
+            // 确保当前学期文件内容是最新的，并推送
             var curFileName = this.getCurrentEditFileName();
             var curEntry = findIndexByName(curFileName);
             if (curEntry) {
@@ -4031,31 +4097,26 @@
                     var semData = App.Storage._getSemesterData(curSem.id);
                     writeFileData(curEntry.id, JSON.stringify(semData));
                 }
-                var content = readFileData(curEntry.id) || '';
-                this.postMsg({
-                    type: 'setCurrentFile',
-                    currentFileName: curFileName,
-                    currentContent: content
-                });
+                this._pushContent(curFileName, readFileData(curEntry.id) || '');
             }
-            this.postMsg({ type: 'syncCurrentFromMain' });
+            this.postMsg({ type: 'syncAllFiles' });
             App.Toast.show('正在同步...', 'info');
         },
 
-        // 从云端同步数据
+        // 从云端同步数据（双向：推送本地内容 + 触发管理器全量同步）
         syncData: function () {
             if (this._syncing) return;
             // 没有账密就不同步
             if (!App.Auth.getUsername() || !App.Auth.getPassword()) return;
             this._syncing = true;
 
-            // 先确保镜像文件内容是最新的
+            // 镜像文件内容先落盘
             var mirrorEntry = findIndexByName(MIRROR_FILE_NAME);
             if (mirrorEntry) {
                 var mirrorData = App.Storage._getMirrorData();
                 writeFileData(mirrorEntry.id, JSON.stringify(mirrorData));
             }
-
+            // 当前学期文件内容先落盘
             var curFileName = this.getCurrentEditFileName();
             var curEntry = findIndexByName(curFileName);
             if (curEntry) {
@@ -4064,29 +4125,15 @@
                     var semData = App.Storage._getSemesterData(curSem.id);
                     writeFileData(curEntry.id, JSON.stringify(semData));
                 }
-                var content = readFileData(curEntry.id) || '';
-                this.postMsg({
-                    type: 'setCurrentFile',
-                    currentFileName: curFileName,
-                    currentContent: content
-                });
             }
-            this.postMsg({ type: 'syncCurrentFromMain' });
+            this.pushAllLocalFiles();
+            this.postMsg({ type: 'syncAllFiles' });
             App.Toast.show('正在同步...', 'info');
         },
 
         // 同步所有文件
         syncAll: function () {
-            var curFileName = this.getCurrentEditFileName();
-            var curEntry = findIndexByName(curFileName);
-            if (curEntry) {
-                var content = readFileData(curEntry.id) || '';
-                this.postMsg({
-                    type: 'setCurrentFile',
-                    currentFileName: curFileName,
-                    currentContent: content
-                });
-            }
+            this.pushAllLocalFiles();
             this.postMsg({ type: 'syncAllFiles' });
             App.Toast.show('正在全量同步...', 'info');
         },
@@ -4131,53 +4178,40 @@
         // 登录后检查云端文件，决定是下载还是新建
         checkCloudAndInit: function () {
             var self = this;
-            // 标记等待云端刷新完成
-            this._waitingCloudRefresh = true;
-            // 先刷新云端列表（文件管理器完成后会发 refreshCloudDone 消息）
-            this.postMsg({ type: 'refreshCloud' });
-            // 兜底：5秒后如果还没收到 refreshCloudDone，也执行检查
+            // 通知管理器宿主已就绪：触发其登录同步（拉取云端文件索引）
+            this.postMsg({ type: 'mainReady' });
+            // 兜底：稍后执行一次云端检查（正常情况下由 syncComplete 触发）
             setTimeout(function () {
-                if (self._waitingCloudRefresh) {
-                    self._waitingCloudRefresh = false;
-                    self._doCloudCheck();
-                }
-            }, 5000);
+                self._doCloudCheck();
+            }, 4000);
         },
 
+        // 云端检查：确保镜像文件与当前学期文件就位（云端有则下载，都没有则创建）
         _doCloudCheck: function () {
-            var self = this;
-            var fileIndex = getFileIndex();
-
-            // 0. ★系统设置：登录后先确保存在
-            this.ensureSystemSettings();
-
-            // 1. 镜像文件：无论本地有没有，都请求打开
-            // - 本地有 → openFileById 走先一致再打开
-            // - 本地没有 → 文件管理器查云端缓存并自动下载
-            this.postMsg({
-                type: 'openFile',
-                name: MIRROR_FILE_NAME
-            });
-
-            // 2. 当前学期文件：无论本地有没有，都请求打开
-            // - 本地有 → openFileById 走先一致再打开
-            // - 本地没有 → 文件管理器查云端缓存并自动下载，或创建新文件
+            this._ensureOrPull(MIRROR_FILE_NAME);
             var curSem = App.Semester.getCurrentSemester();
             if (curSem) {
-                var fileName = getSemesterFileName(curSem.id);
-                this.postMsg({
-                    type: 'openFile',
-                    name: fileName
-                });
+                this._ensureOrPull(getSemesterFileName(curSem.id));
             }
+        },
 
-            // 3. 非当前学期的文件：仅建索引，不自动下载内容
-            // （文件管理器已处理：非镜像非编辑文件只建索引）
+        // 同步完成后：拉取本地缺失内容的镜像/当前学期文件
+        _afterSyncPull: function () {
+            this._doCloudCheck();
+        },
 
-            // 延迟后执行首次同步
-            setTimeout(function () {
-                self.syncData();
-            }, 2000);
+        // 确保某文件内容就位：云端有则下载，本地云端都没有则创建
+        _ensureOrPull: function (fileName) {
+            var entry = findIndexByName(fileName);
+            var hasLocal = entry ? !!readFileData(entry.id) : false;
+            if (entry && entry.id && (entry.cloudOnly || !hasLocal)) {
+                // 云端有、本地无内容 → 下载
+                this.postMsg({ type: 'downloadCloudFile', fileId: entry.id, fileName: fileName });
+            } else if (!entry) {
+                // 本地与云端都没有 → 创建并注册
+                this._createMissingFile(fileName);
+            }
+            // 本地已有内容且非云端独占 → 无需处理，交由同步引擎按版本比对
         },
 
         // 处理来自文件管理器的消息
@@ -4226,22 +4260,26 @@
                     App.Toast.show('文件已被删除：' + (msg.name || ''), 'warning');
                     break;
 
-                case 'refreshCloudDone':
-                    // 云端刷新完成，标记已确认并执行文件检查
-                    if (msg.networkOk !== false) {
-                        // 联网成功 → 标记所有文件已确认
-                        if (msg.cloudFiles) {
-                            for (var cfIdx = 0; cfIdx < msg.cloudFiles.length; cfIdx++) {
-                                var cfName = msg.cloudFiles[cfIdx];
-                                App.Storage._cloudFileConfirmed[cfName] = true;
-                                App.Storage._cloudFileCache[cfName] = true;
-                            }
-                        }
+                case 'syncComplete':
+                    // 同步完成（管理器已刷新云端索引）→ 重置同步态并检查需下载文件
+                    this._syncing = false;
+                    this._afterSyncPull();
+                    break;
+
+                case 'cloudIndexUpdated':
+                    this._afterSyncPull();
+                    break;
+
+                case 'syncState':
+                    var stateIcon = document.getElementById('btn-sync-icon');
+                    if (stateIcon) {
+                        stateIcon.textContent = msg.state === 'syncing' ? '⏳' : (msg.state === 'error' ? '⚠️' : '☁️');
                     }
-                    if (this._waitingCloudRefresh) {
-                        this._waitingCloudRefresh = false;
-                        this._doCloudCheck();
-                    }
+                    if (msg.state !== 'syncing') this._syncing = false;
+                    break;
+
+                case 'contentSaved':
+                case 'starChanged':
                     break;
 
                 case 'closeFileManager':
@@ -4304,26 +4342,11 @@
                     this._syncing = false;
                     break;
 
-                case 'systemSettingsEnsured':
-                    if (msg.success) {
-                        console.log('[★系统设置] 已确保存在');
-                    }
-                    break;
-
-                case 'systemSettingsRead':
-                    if (msg.settings) {
-                        console.log('[★系统设置] 读取成功:', msg.settings);
-                    }
-                    break;
-
-                case 'systemSettingsWritten':
-                    if (msg.success) {
-                        console.log('[★系统设置] 写入成功');
-                    }
+                case 'syncSettingsChanged':
                     break;
 
                 case 'allCloudDataDeleted':
-                    // 云端数据已清理完毕，现在清本地
+                    // 兼容：云端数据清理完毕，现在清本地
                     if (this._resetFallbackTimer) {
                         clearTimeout(this._resetFallbackTimer);
                         this._resetFallbackTimer = null;
@@ -4341,21 +4364,24 @@
 
         // 将云端下载的内容写入对应文件
         // 本地和云端都没有文件时，自动创建并发注册
-        // ===== ★系统设置 相关方法 =====
+        // ===== ★系统设置 相关方法（6.0：改为确保本地镜像并推送内容） =====
 
         // 确保★系统设置存在（首次登录时调用）
         ensureSystemSettings: function () {
-            this.postMsg({ type: 'ensureSystemSettings' });
+            App.Storage._ensureMirrorFile();
+            var entry = findIndexByName(MIRROR_FILE_NAME);
+            if (entry) {
+                var content = readFileData(entry.id) || '';
+                if (content) this._pushContent(MIRROR_FILE_NAME, content);
+            }
         },
 
-        // 读取★系统设置
+        // 读取★系统设置（6.0 管理器无此消息，保留空实现兼容）
         readSystemSettings: function () {
-            this.postMsg({ type: 'readSystemSettings' });
         },
 
-        // 写入★系统设置
+        // 写入★系统设置（6.0 管理器无此消息，保留空实现兼容）
         writeSystemSettings: function (settings) {
-            this.postMsg({ type: 'writeSystemSettings', settings: settings });
         },
 
         _createMissingFile: function (fileName) {

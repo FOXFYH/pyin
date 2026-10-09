@@ -418,6 +418,9 @@
     <!-- Toast -->
     <div class="toast-container" id="toast-container"></div>
 
+    <!-- 文件管理器后台 iframe（常驻，供后台自动同步） -->
+    <iframe id="fileManagerBg" src="about:blank" style="position:absolute;width:0;height:0;border:0;visibility:hidden" title="文件管理器后台"></iframe>
+
     <!-- 文件管理器弹窗 -->
     <div class="file-modal-overlay" id="file-modal" onclick="if(event.target===this)App.FileSync.closeManager()">
         <div class="file-modal-box">
