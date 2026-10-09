@@ -3951,6 +3951,36 @@
             msg.target = 'fileManager';
             try { frame.contentWindow.postMessage(msg, '*'); } catch (e) { }
         },
+        // 向两个iframe（后台常驻+弹窗）同时发消息
+        postToBothFrames: function (msg) {
+            msg.target = 'fileManager';
+            var frames = [document.getElementById('fileManagerBg'), document.getElementById('fileManagerFrame')];
+            for (var i = 0; i < frames.length; i++) {
+                var frame = frames[i];
+                if (frame && frame.contentWindow) {
+                    try { frame.contentWindow.postMessage(msg, '*'); } catch (e) { }
+                }
+            }
+        },
+        // 统一下发初始化配置与凭据（onReady 与 fmReady 共用）
+        _sendInitAndAuth: function () {
+            var msgs = [
+                {
+                    type: 'initConfig',
+                    appPrefix: this.KEY_PREFIX,
+                    config: {
+                        appPrefix: this.KEY_PREFIX,
+                        sheetName: this.CLOUD_TABLE,
+                        enabled: true,
+                        autoSyncScope: 'all',
+                        mirrorPrefix: '★'
+                    }
+                },
+                { type: 'mainReady' }
+            ];
+            for (var i = 0; i < msgs.length; i++) this.postToBothFrames(msgs[i]);
+            if (App.Auth) App.Auth.syncAuthToFileManager();
+        },
 
         // 推送某文件内容到管理器（未就绪时先排队）
         _pendingPush: [],
@@ -3983,22 +4013,8 @@
 
             var onReady = function () {
                 self._frameReady = true;
-                // 发送初始化配置
-                self.postMsg({
-                    type: 'initConfig',
-                    appPrefix: self.KEY_PREFIX,
-                    config: {
-                        appPrefix: self.KEY_PREFIX,
-                        sheetName: self.CLOUD_TABLE,
-                        enabled: true,
-                        autoSyncScope: 'all',
-                        mirrorPrefix: '★'
-                    }
-                });
-                // 通知管理器宿主已就绪，启动自动同步
-                self.postMsg({ type: 'mainReady' });
-                // 传递认证信息到文件管理器
-                App.Auth.syncAuthToFileManager();
+                // 下发初始化配置 + 认证信息（两个iframe都发）
+                self._sendInitAndAuth();
                 // 补发排队中的内容
                 self._flushPending();
             };
@@ -4222,6 +4238,10 @@
                 return;
             }
             switch (msg.type) {
+                case 'fmReady':
+                    // 文件管理器就绪握手：补发配置与凭据
+                    this._sendInitAndAuth();
+                    break;
                 case 'openFile':
                     // 文件被打开，导入数据到对应文件
                     if (msg.name && msg.content) {
