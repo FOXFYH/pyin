@@ -4196,10 +4196,26 @@
             var self = this;
             // 通知管理器宿主已就绪：触发其登录同步（拉取云端文件索引）
             this.postMsg({ type: 'mainReady' });
-            // 兜底：稍后执行一次云端检查（正常情况下由 syncComplete 触发）
-            setTimeout(function () {
-                self._doCloudCheck();
-            }, 4000);
+            // 登录门禁：必须读到验证行(999999999)才允许云端检查与本地创建
+            var tries = 0;
+            var timer = setInterval(function () {
+                tries++;
+                self.postMsg({ type: 'loginGateReadAll' });
+                if (self._gateDone || tries >= 8) clearInterval(timer);
+            }, 3000);
+            this.postMsg({ type: 'loginGateReadAll' });
+        },
+        // 登录门禁处理：读到验证行才放行；读不到不许创建系统文件
+        _applyLoginGate: function (msg) {
+            var rows = (msg && msg.rows) || [];
+            var verify = false;
+            for (var i = 0; i < rows.length; i++) { if (String(rows[i].ID) === '999999999') { verify = true; break; } }
+            if (!msg || !msg.ok || !verify) {
+                App.Toast.show('云端校验失败：读不到验证行，已阻止创建本地系统文件', 'error');
+                return;
+            }
+            this._gateDone = true;
+            this._doCloudCheck();
         },
 
         // 云端检查：确保镜像文件与当前学期文件就位（云端有则下载，都没有则创建）
@@ -4278,6 +4294,10 @@
 
                 case 'fileDeleted':
                     App.Toast.show('文件已被删除：' + (msg.name || ''), 'warning');
+                    break;
+
+                case 'loginGateResult':
+                    this._applyLoginGate(msg);
                     break;
 
                 case 'syncComplete':
